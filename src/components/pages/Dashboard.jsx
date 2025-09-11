@@ -139,9 +139,9 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+<div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Production Lines */}
-<div className="xl:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Production Lines Status</h2>
             {productionLines.length === 0 ? (
@@ -159,12 +159,14 @@ const Dashboard = () => {
             )}
           </div>
 
-{/* Work Order Summary */}
-          <WorkOrderSummary />
+          {/* Work Order Summary */}
+          <div>
+            <WorkOrderSummary />
+          </div>
         </div>
 
         {/* Machine Utilization */}
-          <div>
+        <div>
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Machine Utilization</h2>
             {machines.length === 0 ? (
               <Empty
@@ -191,7 +193,7 @@ const Dashboard = () => {
                 </Card.Content>
               </Card>
             )}
-          </div>
+</div>
         </div>
 
         {/* Sidebar - Alerts & Activity */}
@@ -255,10 +257,10 @@ const Dashboard = () => {
               </Card.Content>
             </Card>
           </div>
-        </div>
+</div>
       </div>
 
-{/* Production Target Progress */}
+      {/* Production Target Progress */}
       <Card>
         <Card.Header>
           <Card.Title>Daily Production Progress</Card.Title>
