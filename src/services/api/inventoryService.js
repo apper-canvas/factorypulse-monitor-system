@@ -387,6 +387,7 @@ const getLowStockAlerts = async () => {
   }));
 };
 
+// Named exports for individual functions
 export {
   getMaterials,
   getMaterialById,
@@ -403,3 +404,23 @@ export {
   getBatchesForProduct,
   createWorkOrderForProduct
 };
+
+// Default export object containing all functions
+const inventoryService = {
+  getMaterials,
+  getMaterialById,
+  addMaterial,
+  updateMaterial,
+  bulkUpdateQuantities,
+  bulkUpdateReorderPoints,
+  adjustStock,
+  exportMaterialsData,
+  getLowStockAlerts,
+  getFinishedGoods,
+  getFinishedGoodById,
+  adjustFinishedGoodStock,
+  getBatchesForProduct,
+  createWorkOrderForProduct
+};
+
+export default inventoryService;
