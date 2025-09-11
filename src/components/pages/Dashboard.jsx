@@ -138,9 +138,9 @@ const Dashboard = () => {
           icon="Shield"
           variant={totalDefectRate <= 2 ? "success" : totalDefectRate <= 5 ? "warning" : "error"}
         />
-      </div>
+</div>
 
-<div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Production Lines */}
         <div className="xl:col-span-2 space-y-6">
           <div>
