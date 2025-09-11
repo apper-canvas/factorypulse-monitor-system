@@ -1,0 +1,102 @@
+[
+  {
+    "Id": 1,
+    "name": "Sarah Johnson",
+    "company": "Acme Manufacturing Corp",
+    "email": "sarah.johnson@acme-mfg.com",
+    "phone": "+1 (555) 123-4567",
+    "address": "1234 Industrial Blvd, Manufacturing City, MC 12345",
+    "industry": "Industrial Manufacturing",
+    "established": "2015-03-15"
+  },
+  {
+    "Id": 2,
+    "name": "Michael Chen",
+    "company": "TechForge Industries",
+    "email": "m.chen@techforge.com",
+    "phone": "+1 (555) 234-5678",
+    "address": "5678 Technology Drive, Innovation Park, IP 23456",
+    "industry": "Technology Manufacturing",
+    "established": "2018-07-22"
+  },
+  {
+    "Id": 3,
+    "name": "Jennifer Martinez",
+    "company": "Global Automotive Solutions",
+    "email": "jennifer.martinez@globalauto.com",
+    "phone": "+1 (555) 345-6789",
+    "address": "9876 Automotive Way, Motor City, MC 34567",
+    "industry": "Automotive",
+    "established": "2012-11-08"
+  },
+  {
+    "Id": 4,
+    "name": "Robert Wilson",
+    "company": "Metro Construction Ltd",
+    "email": "r.wilson@metroconstruction.com",
+    "phone": "+1 (555) 456-7890",
+    "address": "4567 Construction Ave, Builder Town, BT 45678",
+    "industry": "Construction",
+    "established": "2010-05-30"
+  },
+  {
+    "Id": 5,
+    "name": "Lisa Chen",
+    "company": "Precision Dynamics Inc",
+    "email": "lisa.chen@precisiondynamics.com",
+    "phone": "+1 (555) 567-8901",
+    "address": "7890 Precision Parkway, Micro City, MC 56789",
+    "industry": "Precision Manufacturing",
+    "established": "2016-09-12"
+  },
+  {
+    "Id": 6,
+    "name": "Mark Thompson",
+    "company": "Advanced Materials Co",
+    "email": "mark.thompson@advmaterials.com",
+    "phone": "+1 (555) 678-9012",
+    "address": "2345 Materials Boulevard, Composite Valley, CV 67890",
+    "industry": "Advanced Materials",
+    "established": "2014-02-18"
+  },
+  {
+    "Id": 7,
+    "name": "Carlos Mendez",
+    "company": "Industrial Supply Chain",
+    "email": "carlos.mendez@industrialsupply.com",
+    "phone": "+1 (555) 789-0123",
+    "address": "6789 Supply Chain Drive, Logistics Hub, LH 78901",
+    "industry": "Industrial Distribution",
+    "established": "2013-08-25"
+  },
+  {
+    "Id": 8,
+    "name": "Green Energy Team",
+    "company": "Renewable Energy Systems",
+    "email": "contact@renewableenergy.com",
+    "phone": "+1 (555) 890-1234",
+    "address": "3456 Solar Street, Green Valley, GV 89012",
+    "industry": "Renewable Energy",
+    "established": "2017-04-10"
+  },
+  {
+    "Id": 9,
+    "name": "Maritime Division",
+    "company": "Marine Equipment Corp",
+    "email": "maritime@marineequip.com",
+    "phone": "+1 (555) 901-2345",
+    "address": "8901 Harbor Drive, Port City, PC 90123",
+    "industry": "Marine Equipment",
+    "established": "2011-12-03"
+  },
+  {
+    "Id": 10,
+    "name": "Food Safety Team",
+    "company": "Food Processing Industries",
+    "email": "safety@foodprocessing.com",
+    "phone": "+1 (555) 012-3456",
+    "address": "5432 Processing Lane, Food Valley, FV 01234",
+    "industry": "Food Processing",
+    "established": "2009-06-15"
+  }
+]

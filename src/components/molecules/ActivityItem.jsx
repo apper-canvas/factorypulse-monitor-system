@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import ApperIcon from "@/components/ApperIcon";
 import { formatDistanceToNow } from "date-fns";
+import React from "react";
 import { cn } from "@/utils/cn";
+import ApperIcon from "@/components/ApperIcon";
 
 const ActivityItem = ({ activity, className }) => {
   const getActivityIcon = (type) => {
@@ -14,10 +15,14 @@ const ActivityItem = ({ activity, className }) => {
         return "Wrench";
       case "quality_check":
         return "Shield";
-      case "material_received":
+case "material_received":
         return "Package";
       case "order_shipped":
         return "Truck";
+      case "order_created":
+        return "Plus";
+      case "order_confirmed":
+        return "CheckCircle";
       default:
         return "Activity";
     }
@@ -33,10 +38,14 @@ const ActivityItem = ({ activity, className }) => {
         return "text-warning";
       case "quality_check":
         return "text-purple-600";
-      case "material_received":
+case "material_received":
         return "text-indigo-600";
       case "order_shipped":
         return "text-green-600";
+      case "order_created":
+        return "text-blue-600";
+      case "order_confirmed":
+        return "text-success";
       default:
         return "text-slate-600";
     }
