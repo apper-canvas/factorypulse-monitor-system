@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import * as workOrderService from "@/services/api/workOrderService";
 import Error from "@/components/ui/Error";
 import Empty from "@/components/ui/Empty";
 import Loading from "@/components/ui/Loading";
@@ -19,6 +18,7 @@ import * as qualityService from "@/services/api/qualityService";
 import * as alertService from "@/services/api/alertService";
 import * as machineService from "@/services/api/machineService";
 import * as activityService from "@/services/api/activityService";
+import * as workOrderService from "@/services/api/workOrderService";
 
 const Dashboard = () => {
   const [productionLines, setProductionLines] = useState([]);
@@ -159,11 +159,11 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Work Order Summary */}
+{/* Work Order Summary */}
           <WorkOrderSummary />
-          </div>
+        </div>
 
-          {/* Machine Utilization */}
+        {/* Machine Utilization */}
           <div>
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Machine Utilization</h2>
             {machines.length === 0 ? (
