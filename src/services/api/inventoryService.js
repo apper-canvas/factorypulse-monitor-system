@@ -76,7 +76,161 @@ const updateMaterial = async (id, data) => {
     stockLevel: getStockLevel(materialsData[index].currentStock, materialsData[index].reorderLevel)
   };
 };
+// Bulk operations
+async function bulkUpdateQuantities(updates) {
+  await delay(800);
+  
+  try {
+    const materials = await getMaterials();
+    let updatedCount = 0;
+    
+    const updatedMaterials = materials.map(material => {
+      const update = updates.find(u => u.id === material.Id);
+      if (update && update.quantity !== undefined) {
+        updatedCount++;
+        return {
+          ...material,
+          currentStock: update.quantity,
+          stockLevel: getStockLevel(update.quantity, material.reorderLevel),
+          lastUpdated: new Date().toLocaleDateString()
+        };
+      }
+      return material;
+    });
+    
+    // Simulate saving to storage
+    localStorage.setItem('materials', JSON.stringify(updatedMaterials));
+    
+    return { success: true, updatedCount };
+  } catch (error) {
+    throw new Error('Failed to update quantities in bulk');
+  }
+}
 
+async function bulkUpdateReorderPoints(updates) {
+  await delay(800);
+  
+  try {
+    const materials = await getMaterials();
+    let updatedCount = 0;
+    
+    const updatedMaterials = materials.map(material => {
+      const update = updates.find(u => u.id === material.Id);
+      if (update && update.reorderLevel !== undefined) {
+        updatedCount++;
+        return {
+          ...material,
+          reorderLevel: update.reorderLevel,
+          stockLevel: getStockLevel(material.currentStock, update.reorderLevel),
+          lastUpdated: new Date().toLocaleDateString()
+        };
+      }
+      return material;
+    });
+    
+    // Simulate saving to storage
+    localStorage.setItem('materials', JSON.stringify(updatedMaterials));
+    
+    return { success: true, updatedCount };
+  } catch (error) {
+    throw new Error('Failed to update reorder points in bulk');
+  }
+}
+
+async function adjustStock(materialId, adjustment, reason = '') {
+  await delay(500);
+  
+  try {
+    const materials = await getMaterials();
+    const materialIndex = materials.findIndex(m => m.Id === materialId);
+    
+    if (materialIndex === -1) {
+      throw new Error('Material not found');
+    }
+    
+    const material = materials[materialIndex];
+    const newStock = Math.max(0, material.currentStock + adjustment);
+    
+    materials[materialIndex] = {
+      ...material,
+      currentStock: newStock,
+      stockLevel: getStockLevel(newStock, material.reorderLevel),
+      lastUpdated: new Date().toLocaleDateString()
+    };
+    
+    // Simulate saving to storage
+    localStorage.setItem('materials', JSON.stringify(materials));
+    
+    // Log adjustment (in real app, this would go to audit log)
+    const adjustmentLog = {
+      materialId,
+      materialName: material.name,
+      previousStock: material.currentStock,
+      adjustment,
+      newStock,
+      reason,
+      timestamp: new Date().toISOString(),
+      user: 'Current User'
+    };
+    
+    return { success: true, newStock, adjustmentLog };
+  } catch (error) {
+    throw new Error(`Failed to adjust stock: ${error.message}`);
+  }
+}
+
+function exportMaterialsData(materials, selectedFields = []) {
+  const defaultFields = ['name', 'currentStock', 'unit', 'reorderLevel', 'supplier', 'stockLevel', 'lastUpdated'];
+  const fieldsToExport = selectedFields.length > 0 ? selectedFields : defaultFields;
+  
+  // Create CSV header
+  const header = fieldsToExport.map(field => {
+    const fieldLabels = {
+      name: 'Material Name',
+      currentStock: 'Current Stock',
+      unit: 'Unit',
+      reorderLevel: 'Reorder Level', 
+      supplier: 'Supplier',
+      stockLevel: 'Stock Status',
+      lastUpdated: 'Last Updated'
+    };
+    return fieldLabels[field] || field;
+  });
+  
+  // Create CSV rows
+  const rows = materials.map(material => {
+    return fieldsToExport.map(field => {
+      let value = material[field];
+      if (field === 'stockLevel') {
+        const statusMap = {
+          'adequate': 'Good',
+          'low': 'Low',
+          'critical': 'Critical'
+        };
+        value = statusMap[value] || value;
+      }
+      return `"${value || ''}"`;
+    });
+  });
+  
+  // Combine header and rows
+  const csvContent = [header, ...rows]
+    .map(row => Array.isArray(row) ? row.join(',') : row)
+    .join('\n');
+  
+  // Create download
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `materials-export-${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+  
+  return { success: true, recordCount: materials.length };
+}
 // Finished goods service methods
 const getFinishedGoods = async () => {
   await delay(800);
@@ -110,7 +264,11 @@ export const inventoryService = {
   getMaterials,
   getMaterialById,
   addMaterial,
-  updateMaterial,
+updateMaterial,
+  bulkUpdateQuantities,
+  bulkUpdateReorderPoints,
+  adjustStock,
+  exportMaterialsData,
   getFinishedGoods,
   getFinishedGoodById,
   getLowStockAlerts
