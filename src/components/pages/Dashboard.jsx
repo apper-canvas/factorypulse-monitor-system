@@ -7,8 +7,6 @@ import * as productionService from "@/services/api/productionService";
 import * as qualityService from "@/services/api/qualityService";
 import * as alertService from "@/services/api/alertService";
 import * as machineService from "@/services/api/machineService";
-import Production from "@/components/pages/Production";
-import Orders from "@/components/pages/Orders";
 import Header from "@/components/organisms/Header";
 import MetricCard from "@/components/molecules/MetricCard";
 import ActivityItem from "@/components/molecules/ActivityItem";
@@ -255,10 +253,10 @@ const Dashboard = () => {
                 )}
               </Card.Content>
             </Card>
-          </div>
 </div>
+        </div>
       </div>
-
+      
       {/* Production Target Progress */}
       <Card>
         <Card.Header>
@@ -293,7 +291,7 @@ const Dashboard = () => {
           </div>
         </Card.Content>
       </Card>
-    </div>
+</div>
   );
 };
 
@@ -381,4 +379,5 @@ const WorkOrderSummary = () => {
     </Card>
   );
 };
+
 export default Dashboard;
