@@ -505,33 +505,70 @@ const [workOrders, setWorkOrders] = useState([]);
                 </div>
 
                 {/* Material Requirements */}
-                <div>
+<div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Material Requirements</h3>
                   <div className="space-y-3">
                     {selectedWorkOrder.materialRequirements.map((material, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                        <div className="flex items-center space-x-3">
+                      <div key={index} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50">
+                        <div className="flex items-center space-x-4">
                           <div className={cn(
-                            "w-3 h-3 rounded-full",
+                            "w-4 h-4 rounded-full flex-shrink-0",
                             material.status === 'Available' ? 'bg-success' :
                             material.status === 'Low' ? 'bg-warning' : 'bg-error'
                           )} />
-                          <span className="font-medium text-slate-900">{material.name}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-slate-900">
-                            {material.available}/{material.required}
-                          </div>
-                          <div className={cn("text-xs font-medium", getMaterialStatusColor(material.status))}>
-                            {material.status}
-                            {material.status !== 'Available' && material.required > material.available && (
-                              <span> (-{material.required - material.available})</span>
+                          <div className="flex-1">
+                            <span className="font-medium text-slate-900 block">{material.name}</span>
+                            {material.unit && (
+                              <span className="text-xs text-secondary">Unit: {material.unit}</span>
                             )}
                           </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-slate-900 mb-1">
+                            {material.available?.toLocaleString() || 0}/{material.required?.toLocaleString() || 0}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className={cn("text-xs font-medium px-2 py-1 rounded", getMaterialStatusColor(material.status))}>
+                              {material.status}
+                            </div>
+                            {material.availabilityPercentage !== undefined && (
+                              <div className="text-xs text-secondary">
+                                {material.availabilityPercentage}%
+                              </div>
+                            )}
+                          </div>
+                          {material.shortfall > 0 && (
+                            <div className="text-xs text-error mt-1">
+                              Shortage: {material.shortfall.toLocaleString()}
+                            </div>
+                          )}
+                          {material.totalCost && (
+                            <div className="text-xs text-secondary mt-1">
+                              Est. Cost: ${material.totalCost.toLocaleString()}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
+                  
+                  {/* Material Summary */}
+                  {selectedWorkOrder.estimatedMaterialCost && (
+                    <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700">Total Material Cost:</span>
+                        <span className="font-semibold text-slate-900">
+                          ${selectedWorkOrder.estimatedMaterialCost.toLocaleString()}
+                        </span>
+                      </div>
+                      {selectedWorkOrder.materialRequirements?.some(m => m.status !== 'Available') && (
+                        <div className="flex items-center mt-2 text-warning text-sm">
+                          <ApperIcon name="AlertTriangle" size={14} className="mr-1" />
+                          <span>Material availability issues detected</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
 {/* Resource Allocation */}
@@ -731,31 +768,20 @@ const CreateWorkOrderModal = ({ onClose, onSubmit }) => {
       toast.error('Please fill in all required fields');
       return;
     }
-
-    setLoading(true);
+setLoading(true);
     try {
+      // Enhanced work order creation with real material checking
       const workOrderData = {
         ...formData,
         quantity: parseInt(formData.quantity),
-        materialRequirements: [
-          {
-            name: `${formData.productName} Components`,
-            required: parseInt(formData.quantity),
-            available: Math.floor(parseInt(formData.quantity) * 0.8), // Mock 80% availability
-            status: 'Available'
-          },
-          {
-            name: 'Packaging Materials',
-            required: parseInt(formData.quantity),
-            available: parseInt(formData.quantity) + 50,
-            status: 'Available'
-          }
-        ]
+        // Let the service generate material requirements with real inventory data
+        materialRequirements: [] // Will be populated by the service
       };
       
       await onSubmit(workOrderData);
     } catch (err) {
       console.error('Failed to create work order:', err);
+      toast.error('Failed to create work order. Please check material availability.');
     } finally {
       setLoading(false);
     }

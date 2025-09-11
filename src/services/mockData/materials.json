@@ -1,0 +1,98 @@
+[
+  {
+    "Id": 1,
+    "name": "Steel Sheets",
+    "currentStock": 120,
+    "unit": "sheets",
+    "reorderLevel": 50,
+    "supplier": "MetalWorks Inc",
+    "cost": 45.50,
+    "lastUpdated": "2024-01-15",
+    "location": "Warehouse A-1",
+    "category": "Raw Materials"
+  },
+  {
+    "Id": 2,
+    "name": "Aluminum Rods",
+    "currentStock": 85,
+    "unit": "rods",
+    "reorderLevel": 30,
+    "supplier": "Aluminum Supply Co",
+    "cost": 32.75,
+    "lastUpdated": "2024-01-14",
+    "location": "Warehouse A-2",
+    "category": "Raw Materials"
+  },
+  {
+    "Id": 3,
+    "name": "Copper Wire",
+    "currentStock": 2500,
+    "unit": "meters",
+    "reorderLevel": 500,
+    "supplier": "Electric Components Ltd",
+    "cost": 2.25,
+    "lastUpdated": "2024-01-13",
+    "location": "Warehouse B-1",
+    "category": "Components"
+  },
+  {
+    "Id": 4,
+    "name": "Plastic Pellets",
+    "currentStock": 45,
+    "unit": "kg",
+    "reorderLevel": 100,
+    "supplier": "Polymer Solutions",
+    "cost": 15.80,
+    "lastUpdated": "2024-01-12",
+    "location": "Warehouse C-1",
+    "category": "Raw Materials"
+  },
+  {
+    "Id": 5,
+    "name": "Screws (M8x20)",
+    "currentStock": 1850,
+    "unit": "pieces",
+    "reorderLevel": 500,
+    "supplier": "Fastener World",
+    "cost": 0.15,
+    "lastUpdated": "2024-01-11",
+    "location": "Warehouse D-1",
+    "category": "Hardware"
+  },
+  {
+    "Id": 6,
+    "name": "Rubber Gaskets",
+    "currentStock": 25,
+    "unit": "units",
+    "reorderLevel": 50,
+    "supplier": "Seal Tech",
+    "cost": 8.90,
+    "lastUpdated": "2024-01-10",
+    "location": "Warehouse D-2",
+    "category": "Components"
+  },
+  {
+    "Id": 7,
+    "name": "Paint (Industrial Blue)",
+    "currentStock": 15,
+    "unit": "liters",
+    "reorderLevel": 20,
+    "supplier": "Industrial Coatings",
+    "cost": 28.50,
+    "lastUpdated": "2024-01-09",
+    "location": "Paint Storage",
+    "category": "Finishing"
+  },
+  {
+    "Id": 8,
+    "name": "Packaging Boxes",
+    "currentStock": 450,
+    "unit": "boxes",
+    "reorderLevel": 100,
+    "supplier": "PackRight Solutions",
+    "cost": 3.25,
+    "lastUpdated": "2024-01-08",
+    "location": "Packaging Area",
+    "category": "Packaging"
+  }
+]

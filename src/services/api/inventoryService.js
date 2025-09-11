@@ -87,6 +87,8 @@ const mockFinishedGoods = [
     ]
   }
 ];
+import mockMaterials from '@/services/mockData/materials.json';
+import mockFinishedGoods from '@/services/mockData/finishedGoods.json';
 
 let materialsData = [...mockMaterials];
 let finishedGoodsData = [...mockFinishedGoods];
@@ -391,6 +393,7 @@ const getLowStockAlerts = async () => {
 export {
   getMaterials,
   getMaterialById,
+  getMaterialById,
   addMaterial,
   updateMaterial,
   bulkUpdateQuantities,
@@ -403,6 +406,36 @@ export {
   adjustFinishedGoodStock,
   getBatchesForProduct,
   createWorkOrderForProduct
+};
+// Calculate total material requirements for pending work orders
+const getMaterialRequirementsForWorkOrders = async () => {
+  await delay(200);
+  
+  // This would integrate with workOrderService to get pending work orders
+  // For now, return mock data showing material demand
+  return [
+    { materialId: 1, materialName: "Steel Sheets", totalRequired: 150, pendingWorkOrders: 3 },
+    { materialId: 2, materialName: "Aluminum Rods", totalRequired: 75, pendingWorkOrders: 2 },
+    { materialId: 3, materialName: "Copper Wire", totalRequired: 500, pendingWorkOrders: 4 }
+  ];
+};
+
+// Get materials with work order demand information
+const getMaterialsWithDemand = async () => {
+  await delay(300);
+  
+  const materials = await getMaterials();
+  const demandData = await getMaterialRequirementsForWorkOrders();
+  
+  return materials.map(material => {
+    const demand = demandData.find(d => d.materialId === material.Id);
+    return {
+      ...material,
+      pendingDemand: demand?.totalRequired || 0,
+      pendingWorkOrders: demand?.pendingWorkOrders || 0,
+      projectedShortfall: Math.max(0, (demand?.totalRequired || 0) - material.currentStock)
+    };
+  });
 };
 
 // Default export object containing all functions
@@ -420,7 +453,9 @@ const inventoryService = {
   getFinishedGoodById,
   adjustFinishedGoodStock,
   getBatchesForProduct,
-  createWorkOrderForProduct
+  createWorkOrderForProduct,
+  getMaterialRequirementsForWorkOrders,
+  getMaterialsWithDemand
 };
 
 export default inventoryService;
