@@ -106,32 +106,53 @@ const Orders = () => {
     }
   };
 
-// Utility functions for styling
-const getPriorityColor = (priority) => {
-  switch (priority) {
-    case 'High': return 'bg-red-100 text-red-800';
-    case 'Normal': return 'bg-blue-100 text-blue-800';
-    case 'Low': return 'bg-gray-100 text-gray-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'New': return 'bg-yellow-100 text-yellow-800';
-    case 'In Production': return 'bg-orange-100 text-orange-800';
-    case 'Ready': return 'bg-green-100 text-green-800';
-    case 'Shipped': return 'bg-blue-100 text-blue-800';
-    case 'Delivered': return 'bg-purple-100 text-purple-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
-};
-
 // Utility functions for styling (moved outside component for better organization)
-  const isOverdue = (deliveryDate, status) => {
-    if (status === 'Delivered') return false;
-    return isAfter(new Date(), parseISO(deliveryDate));
-  };
+const isOverdue = (deliveryDate, status) => {
+  if (status === 'Delivered') return false;
+  return isAfter(new Date(), parseISO(deliveryDate));
+};
+const getStatusColor = (status) => {
+  if (!status) return 'bg-gray-100 text-gray-800';
+  
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'in progress':
+    case 'in-progress':
+      return 'bg-blue-100 text-blue-800';
+    case 'completed':
+      return 'bg-green-100 text-green-800';
+    case 'delivered':
+      return 'bg-success-100 text-success-600';
+    case 'cancelled':
+    case 'canceled':
+      return 'bg-red-100 text-red-800';
+    case 'on hold':
+    case 'on-hold':
+      return 'bg-orange-100 text-orange-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getPriorityColor = (priority) => {
+  if (!priority) return 'bg-gray-100 text-gray-800';
+  
+  switch (priority.toLowerCase()) {
+    case 'low':
+      return 'bg-green-100 text-green-800';
+    case 'medium':
+    case 'normal':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'high':
+      return 'bg-orange-100 text-orange-800';
+    case 'urgent':
+    case 'critical':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
 
   if (loading) {
     return (
