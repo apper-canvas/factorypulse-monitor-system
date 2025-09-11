@@ -251,11 +251,10 @@ const Dashboard = () => {
                     ))}
                   </div>
                 )}
-              </Card.Content>
+</Card.Content>
             </Card>
-</div>
+          </div>
         </div>
-      </div>
       
       {/* Production Target Progress */}
       <Card>
