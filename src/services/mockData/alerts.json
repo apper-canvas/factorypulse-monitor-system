@@ -1,0 +1,47 @@
+[
+  {
+    "Id": 1,
+    "type": "machine_down",
+    "priority": "Critical",
+    "message": "Lathe-004 has stopped responding and requires immediate attention",
+    "source": "Machine Monitor",
+    "timestamp": "2024-01-15T14:25:00Z",
+    "acknowledged": false
+  },
+  {
+    "Id": 2,
+    "type": "material_shortage",
+    "priority": "High",
+    "message": "Raw material inventory for Steel Rods is running low (< 5% remaining)",
+    "source": "Inventory System",
+    "timestamp": "2024-01-15T13:45:00Z",
+    "acknowledged": false
+  },
+  {
+    "Id": 3,
+    "type": "quality_issue",
+    "priority": "Medium",
+    "message": "Defect rate on Assembly Line B has exceeded 2% threshold",
+    "source": "Quality Control",
+    "timestamp": "2024-01-15T12:30:00Z",
+    "acknowledged": false
+  },
+  {
+    "Id": 4,
+    "type": "maintenance_due",
+    "priority": "Medium",
+    "message": "Scheduled maintenance for Press-002 is due in 2 days",
+    "source": "Maintenance System",
+    "timestamp": "2024-01-15T10:15:00Z",
+    "acknowledged": true
+  },
+  {
+    "Id": 5,
+    "type": "efficiency_low",
+    "priority": "Low",
+    "message": "Assembly Line B efficiency has dropped below 90%",
+    "source": "Performance Monitor",
+    "timestamp": "2024-01-15T09:30:00Z",
+    "acknowledged": false
+  }
+]
