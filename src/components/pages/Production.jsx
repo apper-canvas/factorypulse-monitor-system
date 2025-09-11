@@ -14,13 +14,17 @@ import * as workOrderService from "@/services/api/workOrderService";
 import { cn } from "@/utils/cn";
 
 const Production = () => {
-  const [workOrders, setWorkOrders] = useState([]);
+const [workOrders, setWorkOrders] = useState([]);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'dueDate', direction: 'asc' });
-
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [productSearch, setProductSearch] = useState('');
   useEffect(() => {
     loadWorkOrders();
   }, []);
@@ -88,15 +92,41 @@ const Production = () => {
     }));
   };
 
-  const sortedWorkOrders = [...workOrders].sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
-    
-    if (sortConfig.direction === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    }
-    return aValue < bValue ? 1 : -1;
-  });
+// Filter and sort work orders
+  const filteredAndSortedWorkOrders = [...workOrders]
+    .filter(workOrder => {
+      // Status filter
+      if (statusFilter !== 'All' && workOrder.status !== statusFilter) {
+        return false;
+      }
+      
+      // Product search filter
+      if (productSearch && !workOrder.productName.toLowerCase().includes(productSearch.toLowerCase())) {
+        return false;
+      }
+      
+      // Date range filter
+      if (dateRange.start || dateRange.end) {
+        const dueDate = new Date(workOrder.dueDate);
+        if (dateRange.start && dueDate < new Date(dateRange.start)) {
+          return false;
+        }
+        if (dateRange.end && dueDate > new Date(dateRange.end)) {
+          return false;
+        }
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+      
+      if (sortConfig.direction === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      }
+      return aValue < bValue ? 1 : -1;
+    });
 
   const getStatusVariant = (status) => {
     switch (status.toLowerCase()) {
@@ -174,17 +204,106 @@ const Production = () => {
         <div className="lg:col-span-4">
           <Card className="h-full">
             <Card.Header>
-              <Card.Title>Work Order Queue</Card.Title>
+<Card.Title>Work Order Queue</Card.Title>
               <Card.Description>
-                {workOrders.length} active work orders
+                {filteredAndSortedWorkOrders.length} of {workOrders.length} work orders
               </Card.Description>
             </Card.Header>
-            <Card.Content className="p-0">
+<Card.Content className="p-0">
+              {/* Filter Controls */}
+              <div className="p-4 border-b border-slate-200 bg-slate-50/50 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Status Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    >
+                      <option value="All">All Status</option>
+                      <option value="Pending">Pending</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Complete">Complete</option>
+                      <option value="Overdue">Overdue</option>
+                    </select>
+                  </div>
+
+                  {/* Product Search */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Product Search
+                    </label>
+                    <div className="relative">
+                      <ApperIcon name="Search" className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex items-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter('All');
+                        setDateRange({ start: '', end: '' });
+                        setProductSearch('');
+                      }}
+                      className="text-xs"
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Date Range */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Due Date From
+                    </label>
+                    <input
+                      type="date"
+                      value={dateRange.start}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Due Date To
+                    </label>
+                    <input
+                      type="date"
+                      value={dateRange.end}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {workOrders.length === 0 ? (
                 <Empty
                   title="No Work Orders"
                   message="Create your first work order to get started"
                   icon="FileText"
+                  className="py-12"
+                />
+              ) : filteredAndSortedWorkOrders.length === 0 ? (
+                <Empty
+                  title="No Matching Work Orders"
+                  message="Try adjusting your filters to see more results"
+                  icon="Filter"
                   className="py-12"
                 />
               ) : (
@@ -230,7 +349,7 @@ const Production = () => {
 
                   {/* Table Body */}
                   <div className="max-h-[500px] overflow-y-auto">
-                    {sortedWorkOrders.map((workOrder) => (
+{filteredAndSortedWorkOrders.map((workOrder) => (
                       <motion.div
                         key={workOrder.Id}
                         initial={{ opacity: 0 }}
@@ -412,6 +531,144 @@ const Production = () => {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+{/* Resource Allocation */}
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Resource Allocation</h3>
+                  <div className="space-y-4">
+                    {/* Assigned Machines */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-700 mb-3">Assigned Machines</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="border border-slate-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-slate-900">Machine A-01</span>
+                            <Badge variant="success" size="sm">Active</Badge>
+                          </div>
+                          <div className="text-xs text-slate-600 space-y-1">
+                            <p>Location: Assembly Line A</p>
+                            <p>Efficiency: 94%</p>
+                            <p>Last Maintenance: Jan 10, 2024</p>
+                          </div>
+                        </div>
+                        <div className="border border-slate-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-slate-900">QC-Scanner-02</span>
+                            <Badge variant="warning" size="sm">Standby</Badge>
+                          </div>
+                          <div className="text-xs text-slate-600 space-y-1">
+                            <p>Location: Quality Control Line</p>
+                            <p>Efficiency: 98%</p>
+                            <p>Calibration: Jan 15, 2024</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Assigned Operators */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-700 mb-3">Assigned Operators</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                              <ApperIcon name="User" className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-900">Sarah Johnson</p>
+                              <p className="text-xs text-slate-600">Lead Operator • Line A</p>
+                            </div>
+                          </div>
+                          <Badge variant="success" size="sm">On Duty</Badge>
+                        </div>
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                              <ApperIcon name="User" className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-900">Mike Chen</p>
+                              <p className="text-xs text-slate-600">QC Specialist • Quality Line</p>
+                            </div>
+                          </div>
+                          <Badge variant="default" size="sm">Scheduled</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes and Attachments */}
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Notes & Attachments</h3>
+                  <div className="space-y-4">
+                    {/* Notes Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-slate-700">Production Notes</h4>
+                        <Button variant="outline" size="sm" icon="Plus">
+                          Add Note
+                        </Button>
+                      </div>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-slate-600">Jan 16, 2024 • 2:30 PM</span>
+                            <span className="text-xs text-slate-600">Sarah Johnson</span>
+                          </div>
+                          <p className="text-sm text-slate-900">
+                            Setup completed ahead of schedule. All quality checks passed. Ready to begin production phase.
+                          </p>
+                        </div>
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-slate-600">Jan 15, 2024 • 4:15 PM</span>
+                            <span className="text-xs text-slate-600">Mike Chen</span>
+                          </div>
+                          <p className="text-sm text-slate-900">
+                            Material inspection complete. Minor packaging shortage noted - ordered additional supplies.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Attachments Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-slate-700">Attachments</h4>
+                        <Button variant="outline" size="sm" icon="Paperclip">
+                          Attach File
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                              <ApperIcon name="FileText" className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">Production_Specs_v2.pdf</p>
+                              <p className="text-xs text-slate-600">245 KB • Jan 15, 2024</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" icon="Download" />
+                        </div>
+                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+                              <ApperIcon name="Image" className="w-4 h-4 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">quality_checklist.jpg</p>
+                              <p className="text-xs text-slate-600">1.2 MB • Jan 16, 2024</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" icon="Download" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
