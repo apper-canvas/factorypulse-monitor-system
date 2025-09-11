@@ -3,21 +3,32 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { customerService } from "@/services/api/customerService";
 import { format, isAfter, parseISO } from "date-fns";
-import * as activityService from "@/services/api/activityService";
-import { create, getAll, getById, orderService } from "@/services/api/orderService";
-import * as workOrderService from "@/services/api/workOrderService";
+import { orderService } from "@/services/api/orderService";
+import ApperIcon from "@/components/ApperIcon";
+import Error from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import Badge from "@/components/atoms/Badge";
+import Card from "@/components/atoms/Card";
+import Button from "@/components/atoms/Button";
+import Production from "@/components/pages/Production";
 import * as productionService from "@/services/api/productionService";
 import * as qualityService from "@/services/api/qualityService";
-import * as inventoryService from "@/services/api/inventoryService";
 import * as alertService from "@/services/api/alertService";
 import * as machineService from "@/services/api/machineService";
-import ApperIcon from "@/components/ApperIcon";
-import Production from "@/components/pages/Production";
-import Button from "@/components/atoms/Button";
-import Card from "@/components/atoms/Card";
-import Badge from "@/components/atoms/Badge";
-import Loading from "@/components/ui/Loading";
-import Error from "@/components/ui/Error";
+import * as activityService from "@/services/api/activityService";
+import * as workOrderService from "@/services/api/workOrderService";
+import * as inventoryService from "@/services/api/inventoryService";
+import alertsData from "@/services/mockData/alerts.json";
+import workOrdersData from "@/services/mockData/workOrders.json";
+import customersData from "@/services/mockData/customers.json";
+import machinesData from "@/services/mockData/machines.json";
+import ordersData from "@/services/mockData/orders.json";
+import materialsData from "@/services/mockData/materials.json";
+import productionLinesData from "@/services/mockData/productionLines.json";
+import qualityMetricsData from "@/services/mockData/qualityMetrics.json";
+import finishedGoodsData from "@/services/mockData/finishedGoods.json";
+import activitiesData from "@/services/mockData/activities.json";
+
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -95,26 +106,28 @@ const Orders = () => {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Normal': return 'bg-blue-100 text-blue-800';
-      case 'Low': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+// Utility functions for styling
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'High': return 'bg-red-100 text-red-800';
+    case 'Normal': return 'bg-blue-100 text-blue-800';
+    case 'Low': return 'bg-gray-100 text-gray-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
 
-  const getStatusColor = (status) => {
-switch (status) {
-      case 'New': return 'bg-yellow-100 text-yellow-800';
-      case 'In Production': return 'bg-orange-100 text-orange-800';
-      case 'Ready': return 'bg-green-100 text-green-800';
-      case 'Shipped': return 'bg-blue-100 text-blue-800';
-      case 'Delivered': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'New': return 'bg-yellow-100 text-yellow-800';
+    case 'In Production': return 'bg-orange-100 text-orange-800';
+    case 'Ready': return 'bg-green-100 text-green-800';
+    case 'Shipped': return 'bg-blue-100 text-blue-800';
+    case 'Delivered': return 'bg-purple-100 text-purple-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
 
+// Utility functions for styling (moved outside component for better organization)
   const isOverdue = (deliveryDate, status) => {
     if (status === 'Delivered') return false;
     return isAfter(new Date(), parseISO(deliveryDate));
