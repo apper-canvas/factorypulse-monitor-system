@@ -1,13 +1,6 @@
 import ordersData from "@/services/mockData/orders.json";
 import { toast } from "react-toastify";
 import React from "react";
-import { create, getAll, getById } from "@/services/api/activityService";
-import { create, getAll, getById } from "@/services/api/workOrderService";
-import { create, getAll, getById } from "@/services/api/productionService";
-import { create, getAll, getById } from "@/services/api/qualityService";
-import inventoryService from "@/services/api/inventoryService";
-import { create, getAll, getById } from "@/services/api/alertService";
-import { create, getAll, getById } from "@/services/api/machineService";
 import Error from "@/components/ui/Error";
 
 // In-memory storage for runtime changes
