@@ -4,6 +4,12 @@ import { toast } from "react-toastify";
 import { orderService } from "@/services/api/orderService";
 import { customerService } from "@/services/api/customerService";
 import { format, isAfter, parseISO } from "date-fns";
+import * as activityService from "@/services/api/activityService";
+import * as workOrderService from "@/services/api/workOrderService";
+import * as productionService from "@/services/api/productionService";
+import * as qualityService from "@/services/api/qualityService";
+import * as alertService from "@/services/api/alertService";
+import * as machineService from "@/services/api/machineService";
 import ApperIcon from "@/components/ApperIcon";
 import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
@@ -277,7 +283,24 @@ const Orders = () => {
 
 // Order Details Component
 const OrderDetails = ({ order, onStatusUpdate }) => {
-  const [updating, setUpdating] = useState(false);
+  const [customerDetails, setCustomerDetails] = useState(null);
+
+  // Fetch customer details when order changes
+  useEffect(() => {
+    const fetchCustomerDetails = async () => {
+      if (order?.customerId) {
+        try {
+          const customer = await customerService.getById(order.customerId);
+          setCustomerDetails(customer);
+        } catch (error) {
+          console.error('Failed to fetch customer details:', error);
+        }
+      }
+    };
+    fetchCustomerDetails();
+  }, [order?.customerId]);
+
+const [updating, setUpdating] = useState(false);
 
   const handleStatusChange = async (newStatus) => {
     setUpdating(true);
@@ -339,37 +362,126 @@ const OrderDetails = ({ order, onStatusUpdate }) => {
           </div>
 
           {/* Customer Information */}
-          <div>
+<div>
             <h3 className="font-semibold text-slate-900 mb-3">Customer Information</h3>
             <div className="bg-slate-50 rounded-lg p-4">
-              <div className="font-medium text-slate-900">{order.customerName}</div>
-              <div className="text-secondary text-sm mt-1">Customer ID: {order.customerId}</div>
+              <div className="font-medium text-slate-900 mb-2">{order.customerName}</div>
+              <div className="text-secondary text-sm space-y-1">
+                <div>Customer ID: {order.customerId}</div>
+                {customerDetails && (
+                  <>
+                    <div className="flex items-center gap-2 mt-2">
+                      <ApperIcon name="Mail" size={14} />
+                      <span>{customerDetails.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ApperIcon name="Phone" size={14} />
+                      <span>{customerDetails.phone}</span>
+                    </div>
+                    <div className="flex items-start gap-2 mt-2">
+                      <ApperIcon name="MapPin" size={14} className="mt-0.5" />
+                      <span className="text-xs leading-relaxed">{customerDetails.address}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <ApperIcon name="Building2" size={14} />
+                      <span className="text-xs">{customerDetails.industry}</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Product Details */}
+          
+          {/* Product Specifications */}
           <div>
-            <h3 className="font-semibold text-slate-900 mb-3">Product Details</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-secondary">Product:</span>
-                <span className="font-medium">{order.product}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-secondary">Quantity:</span>
-                <span className="font-medium">{order.quantity}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-secondary">Unit Price:</span>
-                <span className="font-medium">${order.unitPrice?.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-3">
-                <span className="font-semibold text-slate-900">Total Amount:</span>
-                <span className="font-bold text-lg">${order.totalAmount?.toFixed(2)}</span>
+            <h3 className="font-semibold text-slate-900 mb-3">Product Specifications</h3>
+            <div className="bg-slate-50 rounded-lg p-4">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-secondary">Product:</span>
+                  <span className="font-medium">{order.product}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary">Quantity:</span>
+                  <span className="font-medium">{order.quantity}</span>
+                </div>
+                {order.specifications && (
+                  <>
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-secondary">Material Grade:</span>
+                        <span className="font-medium">{order.specifications.materialGrade}</span>
+                      </div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-secondary">Finish Type:</span>
+                        <span className="font-medium">{order.specifications.finishType}</span>
+                      </div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-secondary">Tolerance:</span>
+                        <span className="font-medium">{order.specifications.toleranceLevel}</span>
+                      </div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-secondary">Certification:</span>
+                        <span className="font-medium">
+                          {order.specifications.certificationRequired ? 'Required' : 'Not Required'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="border-t pt-3">
+                      <div className="text-secondary text-sm mb-1">Custom Requirements:</div>
+                      <div className="text-sm bg-white rounded p-2 border">
+                        {order.specifications.customRequirements}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
+          {/* Pricing Breakdown */}
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-3">Pricing Breakdown</h3>
+            <div className="bg-slate-50 rounded-lg p-4">
+              <div className="space-y-3">
+                {order.pricingBreakdown ? (
+                  <>
+<div className="flex justify-between text-sm">
+                      <span className="text-secondary">Materials Cost:</span>
+                      <span className="font-medium">${order.pricingBreakdown.materialsCost?.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-secondary">Labor Cost:</span>
+                      <span className="font-medium">${order.pricingBreakdown.laborCost?.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-secondary">Overhead Cost:</span>
+                      <span className="font-medium">${order.pricingBreakdown.overheadCost?.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-3 text-sm">
+                      <span className="text-secondary">Unit Price:</span>
+                      <span className="font-medium">${order.pricingBreakdown.subtotal?.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-semibold text-slate-900">Total Amount:</span>
+                      <span className="font-bold text-lg">${order.pricingBreakdown.totalAmount?.toFixed(2)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-secondary">Unit Price:</span>
+                      <span className="font-medium">${order.unitPrice?.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-3">
+                      <span className="font-semibold text-slate-900">Total Amount:</span>
+                      <span className="font-bold text-lg">${order.totalAmount?.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
           {/* Dates */}
           <div>
             <h3 className="font-semibold text-slate-900 mb-3">Important Dates</h3>

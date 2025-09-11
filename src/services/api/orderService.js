@@ -75,13 +75,29 @@ export const orderService = {
       
       const newOrder = {
         Id: nextId++,
-        orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
         customerId: orderData.customerId,
         customerName: orderData.customerName,
         product: orderData.product,
         quantity: orderData.quantity,
         unitPrice: orderData.unitPrice,
         totalAmount: orderData.quantity * orderData.unitPrice,
+        // Enhanced pricing breakdown
+        pricingBreakdown: {
+          materialsKost: orderData.unitPrice * 0.45, // 45% materials
+          laborCost: orderData.unitPrice * 0.35,     // 35% labor
+          overheadCost: orderData.unitPrice * 0.20,  // 20% overhead
+          subtotal: orderData.unitPrice,
+          totalAmount: orderData.quantity * orderData.unitPrice
+        },
+        // Product specifications
+        specifications: {
+          customRequirements: orderData.customRequirements || 'Standard specifications',
+          materialGrade: orderData.materialGrade || 'Standard Grade',
+          finishType: orderData.finishType || 'Standard Finish',
+          toleranceLevel: orderData.toleranceLevel || '±0.01mm',
+          certificationRequired: orderData.certificationRequired || false
+        },
         status: 'New',
         priority: orderData.priority || 'Normal',
         orderDate: new Date().toISOString().split('T')[0],
