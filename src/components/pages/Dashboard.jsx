@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
+import { orderService } from "@/services/api/orderService";
 import * as activityService from "@/services/api/activityService";
 import * as workOrderService from "@/services/api/workOrderService";
 import * as productionService from "@/services/api/productionService";
 import * as qualityService from "@/services/api/qualityService";
 import * as alertService from "@/services/api/alertService";
 import * as machineService from "@/services/api/machineService";
+import Production from "@/components/pages/Production";
+import Orders from "@/components/pages/Orders";
 import Header from "@/components/organisms/Header";
 import MetricCard from "@/components/molecules/MetricCard";
 import ActivityItem from "@/components/molecules/ActivityItem";
@@ -18,6 +21,7 @@ import Empty from "@/components/ui/Empty";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
 const Dashboard = () => {
+  const [orderStats, setOrderStats] = useState(null);
   const [productionLines, setProductionLines] = useState([]);
   const [machines, setMachines] = useState([]);
   const [qualityMetrics, setQualityMetrics] = useState([]);
@@ -31,26 +35,30 @@ const Dashboard = () => {
       setLoading(true);
       setError("");
       
-      const [
+const [
         productionData,
         machineData,
         qualityData,
         alertData,
-        activityData
+        activityData,
+        orderData
       ] = await Promise.all([
         productionService.getAll(),
         machineService.getAll(),
         qualityService.getAll(),
         alertService.getAll(),
-        activityService.getAll()
+        activityService.getAll(),
+        orderService.getStats()
       ]);
 
-      setProductionLines(productionData);
+setProductionLines(productionData);
       setMachines(machineData);
       setQualityMetrics(qualityData);
       setAlerts(alertData);
       setActivities(activityData);
+      setOrderStats(orderData);
     } catch (err) {
+      console.error('Failed to load dashboard data:', err);
       setError("Failed to load dashboard data. Please try again.");
     } finally {
       setLoading(false);
@@ -81,22 +89,21 @@ const Dashboard = () => {
   if (error) return <Error message={error} onRetry={loadDashboardData} />;
 
   // Calculate metrics
-  const totalProduction = productionLines.reduce((sum, line) => sum + line.actualOutput, 0);
-  const totalTarget = productionLines.reduce((sum, line) => sum + line.targetOutput, 0);
+  const totalProduction = productionLines.reduce((sum, line) => sum + (line.actualOutput || 0), 0);
+  const totalTarget = productionLines.reduce((sum, line) => sum + (line.targetOutput || 0), 0);
   const averageEfficiency = productionLines.length > 0 
-    ? productionLines.reduce((sum, line) => sum + line.efficiency, 0) / productionLines.length 
+    ? productionLines.reduce((sum, line) => sum + (line.efficiency || 0), 0) / productionLines.length 
     : 0;
   const activeLines = productionLines.filter(line => line.status === "Running").length;
   const averageUtilization = machines.length > 0
-    ? machines.reduce((sum, machine) => sum + machine.utilization, 0) / machines.length
+    ? machines.reduce((sum, machine) => sum + (machine.utilization || 0), 0) / machines.length
     : 0;
   const totalDefectRate = qualityMetrics.length > 0
-    ? qualityMetrics.reduce((sum, metric) => sum + metric.defectRate, 0) / qualityMetrics.length
+    ? qualityMetrics.reduce((sum, metric) => sum + (metric.defectRate || 0), 0) / qualityMetrics.length
     : 0;
   
   const unacknowledgedAlerts = alerts.filter(alert => !alert.acknowledged);
   const recentActivities = activities.slice(0, 6);
-
   return (
     <div className="space-y-6">
       {/* Key Metrics */}

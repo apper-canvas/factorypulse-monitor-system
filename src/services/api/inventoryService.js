@@ -7,7 +7,6 @@ let finishedGoodsData = [...mockFinishedGoods];
 
 // Simulate API delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 // Get stock level status
 const getStockLevel = (current, reorder) => {
   if (current <= reorder * 0.5) return 'critical';
@@ -15,12 +14,39 @@ const getStockLevel = (current, reorder) => {
   return 'adequate';
 };
 
+// Order fulfillment tracking
+const orderReservations = [];
+
+const reserveForOrder = async (orderId, productName, quantity) => {
+  await delay(300);
+  const reservation = {
+    orderId: parseInt(orderId),
+    productName,
+    quantity: parseInt(quantity),
+    reservedAt: new Date().toISOString(),
+    status: 'Reserved'
+  };
+  orderReservations.push(reservation);
+  return reservation;
+};
+
+const releaseOrderReservation = async (orderId) => {
+  await delay(200);
+  const index = orderReservations.findIndex(r => r.orderId === parseInt(orderId));
+  if (index !== -1) {
+    orderReservations.splice(index, 1);
+    return true;
+  }
+  return false;
+};
+
 // Materials service methods
 const getMaterials = async () => {
-  await delay(800);
+await delay(800);
   return materialsData.map(material => ({
     ...material,
-    stockLevel: getStockLevel(material.currentStock, material.reorderLevel)
+    stockLevel: getStockLevel(material.currentStock, material.reorderLevel),
+    reservations: orderReservations.filter(r => r.productName.toLowerCase().includes(material.name.toLowerCase()))
   }));
 };
 
@@ -218,12 +244,32 @@ function exportMaterialsData(materials, selectedFields = []) {
 // Finished goods service methods
 async function getFinishedGoods() {
   await delay(800);
-  return [...mockFinishedGoods];
+  return mockFinishedGoods.map(product => ({
+    ...product,
+    reservations: orderReservations.filter(r => 
+      r.productName.toLowerCase() === product.name.toLowerCase()
+    ),
+    availableForOrder: product.available - orderReservations
+      .filter(r => r.productName.toLowerCase() === product.name.toLowerCase())
+      .reduce((sum, r) => sum + r.quantity, 0)
+  }));
 }
 
 async function getFinishedGoodById(id) {
   await delay(500);
-  return finishedGoodsData.find(fg => fg.Id === parseInt(id)) || null;
+  const product = finishedGoodsData.find(fg => fg.Id === parseInt(id));
+  if (!product) return null;
+  
+  const reservations = orderReservations.filter(r => 
+    r.productName.toLowerCase() === product.name.toLowerCase()
+  );
+  const reservedQuantity = reservations.reduce((sum, r) => sum + r.quantity, 0);
+  
+  return {
+    ...product,
+    reservations,
+    availableForOrder: product.available - reservedQuantity
+  };
 }
 
 async function adjustFinishedGoodStock(productId, adjustments, reason = "") {
@@ -256,6 +302,61 @@ async function adjustFinishedGoodStock(productId, adjustments, reason = "") {
   });
 
   return { ...product };
+}
+
+// Order fulfillment functions
+async function fulfillOrder(orderId, productName, quantity) {
+  await delay(600);
+  
+  // Find product in finished goods
+  const product = mockFinishedGoods.find(p => 
+    p.name.toLowerCase() === productName.toLowerCase()
+  );
+  
+  if (!product) {
+    throw new Error(`Product ${productName} not found in inventory`);
+  }
+  
+  if (product.available < quantity) {
+    throw new Error(`Insufficient inventory for ${productName}. Available: ${product.available}, Required: ${quantity}`);
+  }
+  
+  // Reduce available inventory
+  product.available -= quantity;
+  
+  // Release reservation if exists
+  await releaseOrderReservation(orderId);
+  
+  return {
+    orderId: parseInt(orderId),
+    productName,
+    quantityFulfilled: quantity,
+    remainingInventory: product.available,
+    fulfilledAt: new Date().toISOString()
+  };
+}
+
+async function getOrderFulfillmentStatus(orderId) {
+  await delay(200);
+  const reservation = orderReservations.find(r => r.orderId === parseInt(orderId));
+  
+  if (!reservation) {
+    return { status: 'Not Reserved', orderId: parseInt(orderId) };
+  }
+  
+  const product = mockFinishedGoods.find(p => 
+    p.name.toLowerCase() === reservation.productName.toLowerCase()
+  );
+  
+  return {
+    orderId: parseInt(orderId),
+    status: reservation.status,
+    productName: reservation.productName,
+    reservedQuantity: reservation.quantity,
+    availableInventory: product ? product.available : 0,
+    canFulfill: product ? product.available >= reservation.quantity : false,
+    reservedAt: reservation.reservedAt
+  };
 }
 
 async function getBatchesForProduct(productId) {

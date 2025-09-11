@@ -90,12 +90,20 @@ export const create = async (workOrderData) => {
     // Validate existing material requirements with inventory
     materialRequirements = await checkMaterialAvailability(materialRequirements);
   }
+
+  // Calculate estimated costs
+  const estimatedMaterialCost = materialRequirements.reduce((total, req) => {
+    const unitCost = req.unitCost || (Math.random() * 50 + 10); // Random cost between $10-60
+    return total + (req.required * unitCost);
+  }, 0);
   
   const newWorkOrder = {
-    Id: maxId + 1,
+Id: maxId + 1,
     jobId: `WO-2024-${String(maxJobNumber + 1).padStart(3, '0')}`,
     ...workOrderData,
     materialRequirements,
+    estimatedMaterialCost,
+    orderId: workOrderData.orderId || null, // Link to originating order
     status: "Pending",
     currentStage: "Setup",
     stageProgress: 0,
@@ -164,7 +172,7 @@ export const updateStage = async (id, stageIndex, stageData) => {
   const workOrder = workOrders[index];
   workOrder.stages[stageIndex] = { ...workOrder.stages[stageIndex], ...stageData };
   
-  // Update current stage and overall progress
+// Update current stage and overall progress
   if (stageData.status === "In Progress" && !workOrder.stages[stageIndex].startTime) {
     workOrder.stages[stageIndex].startTime = new Date().toISOString();
   }
@@ -180,6 +188,16 @@ export const updateStage = async (id, stageIndex, stageData) => {
       workOrder.status = "Complete";
       workOrder.currentStage = "Complete";
       workOrder.stageProgress = 100;
+      
+      // Update linked order to Ready status when work order completes
+      if (workOrder.orderId) {
+        try {
+          const { updateStatus } = await import('@/services/api/orderService');
+          await updateStatus(workOrder.orderId, 'Ready', 'Production completed - ready for shipping');
+        } catch (error) {
+          console.error('Failed to update order status:', error);
+        }
+      }
     }
   }
   
@@ -195,6 +213,9 @@ export const updateStage = async (id, stageIndex, stageData) => {
     workOrder.status = "Pending";
   }
   
+  // Calculate overall progress percentage
+  const totalProgress = workOrder.stages.reduce((sum, stage) => sum + (stage.progress || 0), 0);
+  workOrder.stageProgress = Math.round(totalProgress / workOrder.stages.length);
   // Check for overdue status
   const now = new Date();
   const dueDate = new Date(workOrder.dueDate);

@@ -1,5 +1,14 @@
-import ordersData from '@/services/mockData/orders.json';
-import { toast } from 'react-toastify';
+import ordersData from "@/services/mockData/orders.json";
+import { toast } from "react-toastify";
+import React from "react";
+import { create, getAll, getById } from "@/services/api/activityService";
+import { create, getAll, getById } from "@/services/api/workOrderService";
+import { create, getAll, getById } from "@/services/api/productionService";
+import { create, getAll, getById } from "@/services/api/qualityService";
+import inventoryService from "@/services/api/inventoryService";
+import { create, getAll, getById } from "@/services/api/alertService";
+import { create, getAll, getById } from "@/services/api/machineService";
+import Error from "@/components/ui/Error";
 
 // In-memory storage for runtime changes
 let orders = [...ordersData];
@@ -74,8 +83,8 @@ export const orderService = {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const newOrder = {
-        Id: nextId++,
-orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+Id: nextId++,
+        orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
         customerId: orderData.customerId,
         customerName: orderData.customerName,
         product: orderData.product,
@@ -83,8 +92,8 @@ orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
         unitPrice: orderData.unitPrice,
         totalAmount: orderData.quantity * orderData.unitPrice,
         // Enhanced pricing breakdown
-        pricingBreakdown: {
-          materialsKost: orderData.unitPrice * 0.45, // 45% materials
+pricingBreakdown: {
+          materialsCost: orderData.unitPrice * 0.45, // 45% materials
           laborCost: orderData.unitPrice * 0.35,     // 35% labor
           overheadCost: orderData.unitPrice * 0.20,  // 20% overhead
           subtotal: orderData.unitPrice,
@@ -97,12 +106,12 @@ orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
           finishType: orderData.finishType || 'Standard Finish',
           toleranceLevel: orderData.toleranceLevel || '±0.01mm',
           certificationRequired: orderData.certificationRequired || false
-        },
+},
         status: 'New',
         priority: orderData.priority || 'Normal',
         orderDate: new Date().toISOString().split('T')[0],
         deliveryDate: orderData.deliveryDate,
-        notes: orderData.notes || '',
+notes: orderData.notes || '',
         timeline: [
           {
             status: 'New',
@@ -110,7 +119,28 @@ orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
             user: 'System',
             notes: 'Order created'
           }
-        ]
+        ],
+        productionAssignment: null,
+        qualityRequirements: {
+          inspectionPoints: [
+            { name: 'Incoming Material Inspection', required: true, status: 'Pending' },
+            { name: 'In-Process Quality Check', required: true, status: 'Pending' },
+            { name: 'Final Product Inspection', required: true, status: 'Pending' },
+            { name: 'Packaging Quality Check', required: false, status: 'Pending' }
+          ],
+          qualityStandards: 'ISO 9001:2015',
+          testingProcedures: []
+        },
+        shippingInfo: {
+          method: 'Standard Ground',
+          carrier: 'FedEx',
+          trackingNumber: null,
+          estimatedDelivery: null,
+          deliveryPreferences: {
+            signatureRequired: false,
+            deliveryInstructions: ''
+          }
+        }
       };
       
       orders.unshift(newOrder);
@@ -136,8 +166,62 @@ orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
       const order = orders[orderIndex];
       const oldStatus = order.status;
       
-      // Update order status
+// Update order status and handle workflow automation
       order.status = newStatus;
+      
+      // Handle status-specific automation
+      if (newStatus === 'In Production' && oldStatus === 'New') {
+        // Create work order automatically
+        try {
+          const { create: createWorkOrder } = await import('@/services/api/workOrderService');
+          const workOrder = await createWorkOrder({
+            orderId: order.Id,
+            productName: order.product,
+            quantity: order.quantity,
+            customerName: order.customerName,
+            priority: order.priority || 'Normal',
+            dueDate: order.deliveryDate,
+            assignedLine: 'Assembly Line A'
+          });
+          
+          order.productionAssignment = {
+            workOrderId: workOrder.Id,
+            workOrderNumber: workOrder.jobId,
+            assignedLine: workOrder.assignedLine,
+            estimatedCompletion: workOrder.dueDate,
+            progress: 0
+          };
+          
+          // Reserve inventory for this order
+          try {
+            const inventoryService = await import('@/services/api/inventoryService');
+            await inventoryService.default.reserveForOrder(order.Id, order.product, order.quantity);
+          } catch (invError) {
+            console.warn('Could not reserve inventory for order:', invError);
+          }
+          
+        } catch (error) {
+          console.error('Failed to create work order for order:', error);
+        }
+      }
+      
+      // Update shipping info based on status
+      if (newStatus === 'Shipped') {
+        const trackingNumber = `TRK${Date.now().toString().slice(-8)}`;
+        order.shippingInfo.trackingNumber = trackingNumber;
+        order.shippingInfo.estimatedDelivery = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+      }
+      
+      // Update quality requirements status
+      if (newStatus === 'Ready') {
+        order.qualityRequirements.inspectionPoints.forEach(point => {
+          if (point.required) {
+            point.status = 'Passed';
+            point.completedAt = new Date().toISOString();
+            point.completedBy = 'QC Team';
+          }
+        });
+      }
       
       // Add timeline entry
       order.timeline = order.timeline || [];
@@ -179,7 +263,7 @@ orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
     }
   },
 
-  // Get order statistics
+// Get order statistics
   getStats: async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -187,13 +271,18 @@ orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
       const stats = {
         total: orders.length,
         new: orders.filter(o => o.status === 'New').length,
-        confirmed: orders.filter(o => o.status === 'Confirmed').length,
+        inProduction: orders.filter(o => o.status === 'In Production').length,
+        ready: orders.filter(o => o.status === 'Ready').length,
+        shipped: orders.filter(o => o.status === 'Shipped').length,
+        delivered: orders.filter(o => o.status === 'Delivered').length,
         overdue: orders.filter(o => {
           const deliveryDate = new Date(o.deliveryDate);
           const today = new Date();
-          return deliveryDate < today && o.status !== 'Delivered';
+          return deliveryDate < today && !['Shipped', 'Delivered'].includes(o.status);
         }).length,
-        totalValue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
+        totalValue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+        avgDeliveryTime: calculateAverageDeliveryTime(orders),
+        onTimeDeliveryRate: calculateOnTimeDeliveryRate(orders)
       };
       
       return stats;
@@ -202,4 +291,38 @@ orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
       throw error;
     }
   }
+};
+
+// Helper function to calculate average delivery time
+const calculateAverageDeliveryTime = (orders) => {
+  const deliveredOrders = orders.filter(o => o.status === 'Delivered' && o.timeline);
+  if (deliveredOrders.length === 0) return 0;
+  
+  const totalDays = deliveredOrders.reduce((sum, order) => {
+    const createdEvent = order.timeline.find(t => t.status === 'New');
+    const deliveredEvent = order.timeline.find(t => t.status === 'Delivered');
+    if (createdEvent && deliveredEvent) {
+      const daysDiff = Math.ceil((new Date(deliveredEvent.timestamp) - new Date(createdEvent.timestamp)) / (1000 * 60 * 60 * 24));
+      return sum + daysDiff;
+    }
+    return sum;
+  }, 0);
+  
+  return Math.round(totalDays / deliveredOrders.length);
+};
+
+// Helper function to calculate on-time delivery rate
+const calculateOnTimeDeliveryRate = (orders) => {
+  const deliveredOrders = orders.filter(o => o.status === 'Delivered');
+  if (deliveredOrders.length === 0) return 100;
+  
+  const onTimeOrders = deliveredOrders.filter(o => {
+    const deliveredEvent = o.timeline.find(t => t.status === 'Delivered');
+    if (deliveredEvent && o.deliveryDate) {
+      return new Date(deliveredEvent.timestamp) <= new Date(o.deliveryDate);
+    }
+    return true;
+  });
+  
+  return Math.round((onTimeOrders.length / deliveredOrders.length) * 100);
 };

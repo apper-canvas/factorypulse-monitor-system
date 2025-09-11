@@ -8,9 +8,11 @@ import * as activityService from "@/services/api/activityService";
 import * as workOrderService from "@/services/api/workOrderService";
 import * as productionService from "@/services/api/productionService";
 import * as qualityService from "@/services/api/qualityService";
+import * as inventoryService from "@/services/api/inventoryService";
 import * as alertService from "@/services/api/alertService";
 import * as machineService from "@/services/api/machineService";
 import ApperIcon from "@/components/ApperIcon";
+import Production from "@/components/pages/Production";
 import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
 import Badge from "@/components/atoms/Badge";
@@ -103,10 +105,12 @@ const Orders = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+switch (status) {
       case 'New': return 'bg-yellow-100 text-yellow-800';
-      case 'Confirmed': return 'bg-green-100 text-green-800';
-      case 'Delivered': return 'bg-blue-100 text-blue-800';
+      case 'In Production': return 'bg-orange-100 text-orange-800';
+      case 'Ready': return 'bg-green-100 text-green-800';
+      case 'Shipped': return 'bg-blue-100 text-blue-800';
+      case 'Delivered': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -179,9 +183,11 @@ const Orders = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="all">All Status</option>
+<option value="all">All Status</option>
                   <option value="new">New</option>
-                  <option value="confirmed">Confirmed</option>
+                  <option value="in production">In Production</option>
+                  <option value="ready">Ready</option>
+                  <option value="shipped">Shipped</option>
                   <option value="delivered">Delivered</option>
                 </select>
               </div>
@@ -205,7 +211,7 @@ const Orders = () => {
                       </Badge>
                     </div>
                     
-                    <div className="space-y-1 text-sm">
+<div className="space-y-1 text-sm">
                       <div className="font-medium text-slate-800">{order.customerName}</div>
                       <div className="text-secondary">{order.product}</div>
                       <div className="flex items-center justify-between">
@@ -214,6 +220,11 @@ const Orders = () => {
                           {order.status}
                         </Badge>
                       </div>
+                      {order.productionAssignment && (
+                        <div className="text-xs text-slate-500">
+                          WO: {order.productionAssignment.workOrderNumber}
+                        </div>
+                      )}
                       <div className="text-secondary">
                         Delivery: {format(parseISO(order.deliveryDate), 'MMM dd, yyyy')}
                         {isOverdue(order.deliveryDate, order.status) && (
@@ -237,10 +248,11 @@ const Orders = () => {
 
         {/* Order Details Panel (45%) */}
         <div className="col-span-5">
-          {selectedOrder ? (
+{selectedOrder ? (
             <OrderDetails 
               order={selectedOrder} 
               onStatusUpdate={handleStatusUpdate}
+              onRefresh={() => loadOrders()}
             />
           ) : (
             <Card className="h-full flex items-center justify-center">
@@ -308,28 +320,22 @@ const [updating, setUpdating] = useState(false);
     setUpdating(false);
   };
 
-  const canConfirm = order.status === 'New';
-  const canDeliver = order.status === 'Confirmed';
+const canStartProduction = order.status === 'New';
+  const canMarkReady = order.status === 'In Production';
+  const canShip = order.status === 'Ready';
+  const canDeliver = order.status === 'Shipped';
+
+const [activeTab, setActiveTab] = useState('details');
 
   return (
     <Card className="h-full">
-      <Card.Content className="p-6">
+<Card.Content className="p-6">
         <div className="space-y-6">
           {/* Order Header */}
-          <div className="border-b pb-6">
+          <div className="border-b border-slate-200 pb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-slate-900">{order.orderNumber}</h2>
               <div className="flex space-x-2">
-                {canConfirm && (
-                  <Button 
-                    variant="primary" 
-                    size="sm"
-                    disabled={updating}
-                    onClick={() => handleStatusChange('Confirmed')}
-                  >
-                    Confirm Order
-                  </Button>
-                )}
                 {canDeliver && (
                   <Button 
                     variant="success" 
@@ -345,24 +351,21 @@ const [updating, setUpdating] = useState(false);
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-secondary">Status:</span>
-                <Badge className={`ml-2 ${order.status === 'New' ? 'bg-yellow-100 text-yellow-800' : 
-                  order.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                <span className="text-secondary">Status: </span>
+                <Badge className={getStatusColor(order.status)}>
                   {order.status}
                 </Badge>
               </div>
               <div>
-                <span className="text-secondary">Priority:</span>
-                <Badge className={`ml-2 ${order.priority === 'High' ? 'bg-red-100 text-red-800' : 
-                  order.priority === 'Normal' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                <span className="text-secondary">Priority: </span>
+                <Badge className={getPriorityColor(order.priority)}>
                   {order.priority}
                 </Badge>
               </div>
             </div>
           </div>
-
-          {/* Customer Information */}
-<div>
+{/* Customer Information */}
+          <div>
             <h3 className="font-semibold text-slate-900 mb-3">Customer Information</h3>
             <div className="bg-slate-50 rounded-lg p-4">
               <div className="font-medium text-slate-900 mb-2">{order.customerName}</div>
@@ -391,126 +394,290 @@ const [updating, setUpdating] = useState(false);
               </div>
             </div>
           </div>
+{/* Status Update Buttons */}
+          <div className="flex items-center space-x-2 mb-6">
+            {canStartProduction && (
+              <Button
+                size="sm"
+                variant="primary"
+                icon="Play"
+                onClick={() => handleStatusChange('In Production')}
+              >
+                Start Production
+              </Button>
+            )}
+            {canMarkReady && (
+              <Button
+                size="sm"
+                variant="success"
+                icon="CheckCircle"
+                onClick={() => handleStatusChange('Ready')}
+              >
+                Mark Ready
+              </Button>
+            )}
+            {canShip && (
+              <Button
+                size="sm"
+                variant="primary"
+                icon="Truck"
+                onClick={() => handleStatusChange('Shipped')}
+              >
+                Ship Order
+              </Button>
+            )}
+            {canDeliver && (
+              <Button
+                size="sm"
+                variant="success"
+                icon="Package"
+                onClick={() => handleStatusChange('Delivered')}
+              >
+                Mark Delivered
+              </Button>
+            )}
+          </div>
           
-          {/* Product Specifications */}
-          <div>
-            <h3 className="font-semibold text-slate-900 mb-3">Product Specifications</h3>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-secondary">Product:</span>
-                  <span className="font-medium">{order.product}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-secondary">Quantity:</span>
-                  <span className="font-medium">{order.quantity}</span>
-                </div>
-                {order.specifications && (
-                  <>
-                    <div className="border-t pt-3">
-                      <div className="flex justify-between mb-2">
-                        <span className="text-secondary">Material Grade:</span>
-                        <span className="font-medium">{order.specifications.materialGrade}</span>
-                      </div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-secondary">Finish Type:</span>
-                        <span className="font-medium">{order.specifications.finishType}</span>
-                      </div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-secondary">Tolerance:</span>
-                        <span className="font-medium">{order.specifications.toleranceLevel}</span>
-                      </div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-secondary">Certification:</span>
-                        <span className="font-medium">
-                          {order.specifications.certificationRequired ? 'Required' : 'Not Required'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="border-t pt-3">
-                      <div className="text-secondary text-sm mb-1">Custom Requirements:</div>
-                      <div className="text-sm bg-white rounded p-2 border">
-                        {order.specifications.customRequirements}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+          {/* Tab Navigation */}
+          <div className="flex border-b border-slate-200 mb-6">
+            {[
+              { id: 'details', label: 'Order Details', icon: 'FileText' },
+              { id: 'production', label: 'Production', icon: 'Cog' },
+              { id: 'quality', label: 'Quality', icon: 'CheckCircle2' },
+              { id: 'shipping', label: 'Shipping', icon: 'Truck' },
+              { id: 'timeline', label: 'Timeline', icon: 'Clock' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-primary text-primary bg-primary/5'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <ApperIcon name={tab.icon} size={16} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
-
-          {/* Pricing Breakdown */}
-          <div>
-            <h3 className="font-semibold text-slate-900 mb-3">Pricing Breakdown</h3>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <div className="space-y-3">
-                {order.pricingBreakdown ? (
-                  <>
-<div className="flex justify-between text-sm">
-                      <span className="text-secondary">Materials Cost:</span>
-                      <span className="font-medium">${order.pricingBreakdown.materialsCost?.toFixed(2)}</span>
+          
+          {/* Tab Content */}
+          <div className="space-y-6">
+            {activeTab === 'details' && (
+              <div className="space-y-6">
+                {/* Customer and Product Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-secondary">Customer</p>
+                    <p className="font-medium text-slate-900">{order.customerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-secondary">Product</p>
+                    <p className="font-medium text-slate-900">{order.product}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-secondary">Quantity</p>
+                    <p className="font-medium text-slate-900">{order.quantity}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-secondary">Priority</p>
+                    <Badge variant={order.priority === 'High' ? 'error' : order.priority === 'Medium' ? 'warning' : 'default'}>
+                      {order.priority}
+                    </Badge>
+                  </div>
+                </div>
+                
+                {/* Order Value */}
+                <div className="p-4 bg-slate-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-secondary">Order Value</span>
+                    <span className="text-xl font-semibold text-slate-900">
+                      ${order.totalAmount?.toLocaleString() || 'N/A'}
+                    </span>
+                  </div>
+                  {order.unitPrice && (
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-secondary">Unit Price</span>
+                      <span className="text-sm text-slate-600">
+                        ${order.unitPrice} × {order.quantity}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-secondary">Labor Cost:</span>
-                      <span className="font-medium">${order.pricingBreakdown.laborCost?.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-secondary">Overhead Cost:</span>
-                      <span className="font-medium">${order.pricingBreakdown.overheadCost?.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-3 text-sm">
-                      <span className="text-secondary">Unit Price:</span>
-                      <span className="font-medium">${order.pricingBreakdown.subtotal?.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-semibold text-slate-900">Total Amount:</span>
-                      <span className="font-bold text-lg">${order.pricingBreakdown.totalAmount?.toFixed(2)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-secondary">Unit Price:</span>
-                      <span className="font-medium">${order.unitPrice?.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-3">
-                      <span className="font-semibold text-slate-900">Total Amount:</span>
-                      <span className="font-bold text-lg">${order.totalAmount?.toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          {/* Dates */}
-          <div>
-            <h3 className="font-semibold text-slate-900 mb-3">Important Dates</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-secondary">Order Date:</span>
-                <span className="font-medium">{format(parseISO(order.orderDate), 'MMM dd, yyyy')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-secondary">Delivery Date:</span>
-                <span className={`font-medium ${isAfter(new Date(), parseISO(order.deliveryDate)) && order.status !== 'Delivered' ? 'text-red-600' : ''}`}>
-                  {format(parseISO(order.deliveryDate), 'MMM dd, yyyy')}
-                  {isAfter(new Date(), parseISO(order.deliveryDate)) && order.status !== 'Delivered' && (
-                    <span className="ml-2 text-red-600 text-sm font-semibold">OVERDUE</span>
                   )}
-                </span>
+                </div>
               </div>
-            </div>
+            )}
+            
+            {activeTab === 'production' && (
+              <div className="space-y-6">
+                {order.productionAssignment ? (
+                  <div>
+                    <h4 className="text-lg font-semibold text-slate-900 mb-4">Production Assignment</h4>
+                    <div className="p-4 border border-slate-200 rounded-lg space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-secondary">Work Order</p>
+                          <p className="font-medium text-slate-900">{order.productionAssignment.workOrderNumber}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-secondary">Assigned Line</p>
+                          <p className="font-medium text-slate-900">{order.productionAssignment.assignedLine}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-secondary">Progress</p>
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1 bg-slate-200 rounded-full h-2">
+                              <div 
+                                className="bg-primary h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${order.productionAssignment.progress || 0}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-slate-900">
+                              {order.productionAssignment.progress || 0}%
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-secondary">Est. Completion</p>
+                          <p className="font-medium text-slate-900">
+                            {order.productionAssignment.estimatedCompletion 
+                              ? format(new Date(order.productionAssignment.estimatedCompletion), 'MMM dd, yyyy')
+                              : 'TBD'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon="ExternalLink"
+                        onClick={() => {
+                          toast.info('Production details view coming soon');
+                        }}
+                      >
+                        View Work Order Details
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <ApperIcon name="AlertCircle" className="mx-auto h-8 w-8 text-slate-400 mb-4" />
+                    <p className="text-slate-500">No production assignment yet</p>
+                    <p className="text-sm text-slate-400 mt-1">Work order will be created when order enters production</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'quality' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-slate-900">Quality Requirements</h4>
+                
+                {/* Quality Standards */}
+                <div className="p-4 bg-slate-50 rounded-lg">
+                  <p className="text-sm text-secondary mb-1">Quality Standards</p>
+                  <p className="font-medium text-slate-900">{order.qualityRequirements?.qualityStandards || 'Standard Quality Controls'}</p>
+                </div>
+                
+                {/* Inspection Points */}
+                <div>
+                  <h5 className="text-md font-medium text-slate-900 mb-3">Inspection Checkpoints</h5>
+                  <div className="space-y-3">
+                    {(order.qualityRequirements?.inspectionPoints || []).map((point, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${
+                            point.status === 'Passed' ? 'bg-green-500' :
+                            point.status === 'Failed' ? 'bg-red-500' :
+                            'bg-slate-300'
+                          }`} />
+                          <div>
+                            <p className="font-medium text-slate-900">{point.name}</p>
+                            {point.completedBy && (
+                              <p className="text-xs text-slate-500">
+                                Completed by {point.completedBy} • {format(new Date(point.completedAt), 'MMM dd, yyyy')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge 
+                            variant={
+                              point.status === 'Passed' ? 'success' :
+                              point.status === 'Failed' ? 'error' :
+                              'default'
+                            }
+                            size="sm"
+                          >
+                            {point.status}
+                          </Badge>
+                          {point.required && (
+                            <Badge variant="outline" size="sm">
+                              Required
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {activeTab === 'shipping' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-slate-900">Shipping Information</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-secondary">Shipping Method</p>
+                    <p className="font-medium text-slate-900">{order.shippingInfo?.method || 'Standard Ground'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-secondary">Carrier</p>
+                    <p className="font-medium text-slate-900">{order.shippingInfo?.carrier || 'FedEx'}</p>
+                  </div>
+                  {order.shippingInfo?.trackingNumber && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-secondary">Tracking Number</p>
+                      <p className="font-medium text-slate-900">{order.shippingInfo.trackingNumber}</p>
+                    </div>
+                  )}
+                  {order.shippingInfo?.estimatedDelivery && (
+                    <div>
+                      <p className="text-sm text-secondary">Est. Delivery</p>
+                      <p className="font-medium text-slate-900">
+                        {format(new Date(order.shippingInfo.estimatedDelivery), 'MMM dd, yyyy')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Delivery Preferences */}
+                <div className="p-4 border border-slate-200 rounded-lg">
+                  <h5 className="text-sm font-medium text-slate-900 mb-3">Delivery Preferences</h5>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Signature Required</span>
+                      <Badge variant={order.shippingInfo?.deliveryPreferences?.signatureRequired ? 'warning' : 'default'} size="sm">
+                        {order.shippingInfo?.deliveryPreferences?.signatureRequired ? 'Yes' : 'No'}
+                      </Badge>
+                    </div>
+                    {order.shippingInfo?.deliveryPreferences?.deliveryInstructions && (
+                      <div>
+                        <p className="text-sm text-slate-600 mb-1">Special Instructions</p>
+                        <p className="text-sm text-slate-900 bg-slate-50 p-2 rounded">
+                          {order.shippingInfo.deliveryPreferences.deliveryInstructions}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+{activeTab === 'timeline' && <OrderTimeline order={order} />}
           </div>
-
-          {/* Notes */}
-          {order.notes && (
-            <div>
-              <h3 className="font-semibold text-slate-900 mb-3">Notes</h3>
-              <div className="bg-slate-50 rounded-lg p-4">
-                <p className="text-slate-700">{order.notes}</p>
-              </div>
-            </div>
-          )}
         </div>
       </Card.Content>
     </Card>
@@ -521,20 +688,24 @@ const [updating, setUpdating] = useState(false);
 const OrderTimeline = ({ order }) => {
   const timeline = order.timeline || [];
 
-  const getTimelineIcon = (status) => {
+const getTimelineIcon = (status) => {
     switch (status) {
       case 'New': return 'Plus';
-      case 'Confirmed': return 'CheckCircle';
-      case 'Delivered': return 'Truck';
-      default: return 'Clock';
+      case 'In Production': return 'Cog';
+      case 'Ready': return 'CheckCircle';
+      case 'Shipped': return 'Truck';
+      case 'Delivered': return 'Package';
+      default: return 'Circle';
     }
   };
 
   const getTimelineColor = (status) => {
     switch (status) {
       case 'New': return 'text-yellow-600';
-      case 'Confirmed': return 'text-green-600';
-      case 'Delivered': return 'text-blue-600';
+      case 'In Production': return 'text-orange-600';
+      case 'Ready': return 'text-green-600';
+      case 'Shipped': return 'text-blue-600';
+      case 'Delivered': return 'text-purple-600';
       default: return 'text-slate-600';
     }
   };
@@ -556,7 +727,7 @@ const OrderTimeline = ({ order }) => {
               
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-slate-900">
-                  {event.status}
+{event.status}
                 </div>
                 <div className="text-xs text-secondary">
                   {format(parseISO(event.timestamp), 'MMM dd, yyyy HH:mm')}
@@ -593,7 +764,7 @@ const NewOrderModal = ({ customers, onClose, onSubmit }) => {
     product: '',
     quantity: '',
     unitPrice: '',
-    priority: 'Normal',
+priority: 'Medium',
     deliveryDate: '',
     notes: ''
   });
@@ -609,9 +780,10 @@ const NewOrderModal = ({ customers, onClose, onSubmit }) => {
     setSubmitting(true);
     try {
       await onSubmit({
-        ...formData,
+...formData,
         quantity: parseInt(formData.quantity),
-        unitPrice: parseFloat(formData.unitPrice)
+        unitPrice: parseFloat(formData.unitPrice),
+        totalAmount: parseInt(formData.quantity) * parseFloat(formData.unitPrice)
       });
     } finally {
       setSubmitting(false);
@@ -733,7 +905,6 @@ const NewOrderModal = ({ customers, onClose, onSubmit }) => {
               />
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Notes
@@ -756,7 +927,9 @@ const NewOrderModal = ({ customers, onClose, onSubmit }) => {
           </div>
         </form>
       </div>
-    </div>
-);
+</div>
+  );
 };
+
+export default Orders;
 export default Orders;
