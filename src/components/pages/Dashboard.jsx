@@ -1,26 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import Error from "@/components/ui/Error";
-import Empty from "@/components/ui/Empty";
-import Loading from "@/components/ui/Loading";
-import GaugeChart from "@/components/molecules/GaugeChart";
-import ActivityItem from "@/components/molecules/ActivityItem";
-import MetricCard from "@/components/molecules/MetricCard";
-import ProductionLineCard from "@/components/molecules/ProductionLineCard";
-import AlertItem from "@/components/molecules/AlertItem";
-import Card from "@/components/atoms/Card";
-import Header from "@/components/organisms/Header";
-import Production from "@/components/pages/Production";
-import Orders from "@/components/pages/Orders";
+import * as activityService from "@/services/api/activityService";
+import * as workOrderService from "@/services/api/workOrderService";
 import * as productionService from "@/services/api/productionService";
 import * as qualityService from "@/services/api/qualityService";
 import * as alertService from "@/services/api/alertService";
 import * as machineService from "@/services/api/machineService";
-import * as activityService from "@/services/api/activityService";
-import * as workOrderService from "@/services/api/workOrderService";
-
-const Dashboard = () => {
+import Production from "@/components/pages/Production";
+import Orders from "@/components/pages/Orders";
+import Header from "@/components/organisms/Header";
+import MetricCard from "@/components/molecules/MetricCard";
+import ActivityItem from "@/components/molecules/ActivityItem";
+import AlertItem from "@/components/molecules/AlertItem";
+import ProductionLineCard from "@/components/molecules/ProductionLineCard";
+import GaugeChart from "@/components/molecules/GaugeChart";
+import Card from "@/components/atoms/Card";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
 const Dashboard = () => {
   const [productionLines, setProductionLines] = useState([]);
   const [machines, setMachines] = useState([]);
