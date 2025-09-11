@@ -1,4 +1,5 @@
 // Mock data for materials
+// Mock data for materials
 const mockMaterials = [
   { Id: 1, name: 'Steel Sheet', currentStock: 150, unit: 'kg', reorderLevel: 100, supplier: 'MetalCorp Inc', lastUpdated: '2024-01-15', cost: 25.50 },
   { Id: 2, name: 'Aluminum Rod', currentStock: 75, unit: 'pieces', reorderLevel: 50, supplier: 'AluminumCo', lastUpdated: '2024-01-14', cost: 12.75 },
@@ -10,12 +11,81 @@ const mockMaterials = [
 
 // Mock data for finished goods
 const mockFinishedGoods = [
-  { Id: 1, name: 'Precision Valve A', available: 45, reserved: 5, total: 50, location: 'Warehouse A-1', imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop' },
-  { Id: 2, name: 'Motor Housing B', available: 28, reserved: 12, total: 40, location: 'Warehouse A-2', imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=100&h=100&fit=crop' },
-  { Id: 3, name: 'Control Panel C', available: 15, reserved: 3, total: 18, location: 'Warehouse B-1', imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop' },
-  { Id: 4, name: 'Hydraulic Pump D', available: 8, reserved: 2, total: 10, location: 'Warehouse B-2', imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=100&h=100&fit=crop' },
-  { Id: 5, name: 'Sensor Array E', available: 22, reserved: 8, total: 30, location: 'Warehouse C-1', imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop' },
-  { Id: 6, name: 'Safety Switch F', available: 35, reserved: 15, total: 50, location: 'Warehouse C-2', imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=100&h=100&fit=crop' }
+  { 
+    Id: 1, 
+    name: 'Precision Valve A', 
+    available: 45, 
+    reserved: 5, 
+    total: 50, 
+    location: 'Warehouse A-1', 
+    imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop',
+    batches: [
+      { batchNumber: 'PVA-2024-001', quantity: 25, expiryDate: '2025-06-15', status: 'active' },
+      { batchNumber: 'PVA-2024-002', quantity: 20, expiryDate: '2025-08-20', status: 'active' }
+    ]
+  },
+  { 
+    Id: 2, 
+    name: 'Motor Housing B', 
+    available: 28, 
+    reserved: 12, 
+    total: 40, 
+    location: 'Warehouse A-2', 
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=100&h=100&fit=crop',
+    batches: [
+      { batchNumber: 'MHB-2024-001', quantity: 40, expiryDate: '2026-12-31', status: 'active' }
+    ]
+  },
+  { 
+    Id: 3, 
+    name: 'Control Panel C', 
+    available: 15, 
+    reserved: 3, 
+    total: 18, 
+    location: 'Warehouse B-1', 
+    imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop',
+    batches: [
+      { batchNumber: 'CPC-2024-001', quantity: 18, expiryDate: '2025-03-10', status: 'active' }
+    ]
+  },
+  { 
+    Id: 4, 
+    name: 'Hydraulic Pump D', 
+    available: 8, 
+    reserved: 2, 
+    total: 10, 
+    location: 'Warehouse B-2', 
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=100&h=100&fit=crop',
+    batches: [
+      { batchNumber: 'HPD-2024-001', quantity: 10, expiryDate: '2025-09-30', status: 'active' }
+    ]
+  },
+  { 
+    Id: 5, 
+    name: 'Sensor Array E', 
+    available: 22, 
+    reserved: 8, 
+    total: 30, 
+    location: 'Warehouse C-1', 
+    imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop',
+    batches: [
+      { batchNumber: 'SAE-2024-001', quantity: 15, expiryDate: '2025-11-15', status: 'active' },
+      { batchNumber: 'SAE-2024-002', quantity: 15, expiryDate: '2026-01-20', status: 'active' }
+    ]
+  },
+  { 
+    Id: 6, 
+    name: 'Safety Switch F', 
+    available: 35, 
+    reserved: 15, 
+    total: 50, 
+    location: 'Warehouse C-2', 
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=100&h=100&fit=crop',
+    batches: [
+      { batchNumber: 'SSF-2024-001', quantity: 30, expiryDate: '2025-07-25', status: 'active' },
+      { batchNumber: 'SSF-2024-002', quantity: 20, expiryDate: '2025-10-12', status: 'active' }
+    ]
+  }
 ];
 
 let materialsData = [...mockMaterials];
@@ -232,44 +302,104 @@ function exportMaterialsData(materials, selectedFields = []) {
   return { success: true, recordCount: materials.length };
 }
 // Finished goods service methods
-const getFinishedGoods = async () => {
+async function getFinishedGoods() {
   await delay(800);
-  return [...finishedGoodsData];
-};
+  return [...mockFinishedGoods];
+}
 
-const getFinishedGoodById = async (id) => {
-  await delay(400);
+async function getFinishedGoodById(id) {
+  await delay(500);
   return finishedGoodsData.find(fg => fg.Id === parseInt(id)) || null;
-};
+}
 
-// Low stock alerts
-const getLowStockAlerts = async () => {
-  await delay(600);
-  const materials = await getMaterials();
-  const lowStockMaterials = materials.filter(m => m.stockLevel !== 'adequate');
+async function adjustFinishedGoodStock(productId, adjustments, reason = "") {
+  await delay(1000);
   
-  return lowStockMaterials.map(material => ({
-    Id: material.Id,
-    type: 'material',
-    name: material.name,
-    currentStock: material.currentStock,
-    reorderLevel: material.reorderLevel,
-    stockLevel: material.stockLevel,
-    supplier: material.supplier,
-    unit: material.unit
+  const product = mockFinishedGoods.find(p => p.Id === parseInt(productId));
+  if (!product) {
+    throw new Error('Product not found');
+  }
+
+  // Update quantities based on batch adjustments
+  adjustments.forEach(adj => {
+    const batch = product.batches.find(b => b.batchNumber === adj.batchNumber);
+    if (batch) {
+      batch.quantity = Math.max(0, batch.quantity + adj.adjustment);
+    }
+  });
+
+  // Recalculate totals
+  const totalAdjustment = adjustments.reduce((sum, adj) => sum + adj.adjustment, 0);
+  product.available = Math.max(0, product.available + totalAdjustment);
+  product.total = Math.max(0, product.total + totalAdjustment);
+
+  // Log adjustment for audit trail
+  console.log(`Stock adjustment for ${product.name}:`, {
+    adjustments,
+    reason,
+    newAvailable: product.available,
+    timestamp: new Date().toISOString()
+  });
+
+  return { ...product };
+}
+
+async function getBatchesForProduct(productId) {
+  await delay(300);
+  const product = mockFinishedGoods.find(p => p.Id === parseInt(productId));
+  return product ? [...product.batches] : [];
+}
+
+async function createWorkOrderForProduct(productId, quantity, priority = 'medium') {
+  await delay(1200);
+  
+  const product = mockFinishedGoods.find(p => p.Id === parseInt(productId));
+  if (!product) {
+    throw new Error('Product not found');
+  }
+
+  // Create work order object
+  const workOrder = {
+    Id: Date.now(), // Simple ID generation for mock
+    productName: product.name,
+    productId: productId,
+    quantity: quantity,
+    priority: priority,
+    status: 'planned',
+    createdAt: new Date().toISOString(),
+    estimatedCompletion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+  };
+
+  console.log('Work order created:', workOrder);
+  return workOrder;
+}
+
+// Low stock alerts service method
+const getLowStockAlerts = async () => {
+  await delay(500);
+  const materials = await getMaterials();
+  return materials.filter(material => 
+    material.stockLevel === 'critical' || material.stockLevel === 'low'
+  ).map(material => ({
+    ...material,
+    alertType: material.stockLevel === 'critical' ? 'critical' : 'warning',
+    message: `${material.name} is ${material.stockLevel === 'critical' ? 'critically' : ''} low on stock`
   }));
 };
 
-export const inventoryService = {
+export {
   getMaterials,
   getMaterialById,
   addMaterial,
-updateMaterial,
+  updateMaterial,
   bulkUpdateQuantities,
   bulkUpdateReorderPoints,
   adjustStock,
   exportMaterialsData,
+  getLowStockAlerts,
   getFinishedGoods,
   getFinishedGoodById,
-  getLowStockAlerts
+  adjustFinishedGoodStock,
+  getBatchesForProduct,
+  createWorkOrderForProduct
 };

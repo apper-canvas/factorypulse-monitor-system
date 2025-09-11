@@ -17,11 +17,14 @@ const [activeTab, setActiveTab] = useState("materials");
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddMaterial, setShowAddMaterial] = useState(false);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
-  const [showMaterialDetail, setShowMaterialDetail] = useState(false);
+const [showMaterialDetail, setShowMaterialDetail] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [showStockAdjustment, setShowStockAdjustment] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showFinishedGoodStockAdjustment, setShowFinishedGoodStockAdjustment] = useState(false);
+  const [showWorkOrderCreation, setShowWorkOrderCreation] = useState(false);
+  const [selectedFinishedGood, setSelectedFinishedGood] = useState(null);
   // Load data on component mount
   useEffect(() => {
     loadInventoryData();
@@ -158,7 +161,28 @@ const handleAddMaterial = async (materialData) => {
       toast.error("Failed to update material");
       console.error("Update material error:", error);
     }
-  };
+};
+
+  async function handleFinishedGoodStockAdjustment(productId, adjustments, reason) {
+    try {
+      await inventoryService.adjustFinishedGoodStock(productId, adjustments, reason);
+      toast.success('Stock adjusted successfully');
+      await loadInventoryData(); // Refresh data
+    } catch (error) {
+      console.error('Stock adjustment failed:', error);
+      toast.error('Failed to adjust stock');
+    }
+  }
+
+  async function handleWorkOrderCreation(productId, quantity, priority) {
+    try {
+      await inventoryService.createWorkOrderForProduct(productId, quantity, priority);
+      toast.success('Work order created successfully');
+    } catch (error) {
+      console.error('Work order creation failed:', error);
+      toast.error('Failed to create work order');
+    }
+  }
 
   // Filter materials based on search term
   const filteredMaterials = materials.filter(material =>
@@ -292,9 +316,17 @@ materials={filteredMaterials}
         )}
         
         {activeTab === "finished" && (
-          <FinishedGoodsTab 
+<FinishedGoodsTab 
             products={filteredFinishedGoods}
             searchTerm={searchTerm}
+            onAdjustStock={(product) => {
+              setSelectedFinishedGood(product);
+              setShowFinishedGoodStockAdjustment(true);
+            }}
+            onCreateWorkOrder={(product) => {
+              setSelectedFinishedGood(product);
+              setShowWorkOrderCreation(true);
+            }}
           />
         )}
         
@@ -346,6 +378,29 @@ materials={filteredMaterials}
           selectedCount={selectedMaterials.length}
           onClose={() => setShowExportModal(false)}
           onExport={handleExportData}
+        />
+      )}
+{/* Finished Good Stock Adjustment Modal */}
+      {showFinishedGoodStockAdjustment && selectedFinishedGood && (
+        <FinishedGoodStockAdjustmentModal
+          product={selectedFinishedGood}
+          onClose={() => {
+            setShowFinishedGoodStockAdjustment(false);
+            setSelectedFinishedGood(null);
+          }}
+          onAdjust={handleFinishedGoodStockAdjustment}
+        />
+      )}
+
+      {/* Work Order Creation Modal */}
+      {showWorkOrderCreation && selectedFinishedGood && (
+        <WorkOrderCreationModal
+          product={selectedFinishedGood}
+          onClose={() => {
+            setShowWorkOrderCreation(false);
+            setSelectedFinishedGood(null);
+          }}
+          onCreate={handleWorkOrderCreation}
         />
       )}
     </div>
@@ -534,7 +589,7 @@ function RawMaterialsTab({
 }
 
 // Finished Goods Tab Component
-function FinishedGoodsTab({ products }) {
+function FinishedGoodsTab({ products, onAdjustStock, onCreateWorkOrder }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => (
@@ -551,6 +606,29 @@ function FinishedGoodsTab({ products }) {
                 <p className="text-sm text-secondary">{product.location}</p>
               </div>
             </div>
+
+            {/* Batch/Lot Information */}
+            {product.batches && product.batches.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-secondary">Active Batches</span>
+                  <Badge variant="info" size="sm">{product.batches.length}</Badge>
+                </div>
+                <div className="space-y-1">
+                  {product.batches.slice(0, 2).map((batch) => (
+                    <div key={batch.batchNumber} className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-700">{batch.batchNumber}</span>
+                      <span className="text-secondary">Qty: {batch.quantity}</span>
+                    </div>
+                  ))}
+                  {product.batches.length > 2 && (
+                    <div className="text-xs text-secondary">
+                      +{product.batches.length - 2} more batches
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
@@ -567,10 +645,27 @@ function FinishedGoodsTab({ products }) {
               </div>
             </div>
             
-            <Button variant="outline" size="sm" className="w-full">
-              <ApperIcon name="Eye" size={16} className="mr-2" />
-              View Details
-            </Button>
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onAdjustStock(product)}
+                className="flex-1"
+              >
+                <ApperIcon name="Package" size={14} className="mr-1" />
+                Adjust Stock
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onCreateWorkOrder(product)}
+                className="flex-1"
+              >
+                <ApperIcon name="Plus" size={14} className="mr-1" />
+                Work Order
+              </Button>
+            </div>
           </Card.Content>
         </Card>
       ))}
@@ -581,6 +676,267 @@ function FinishedGoodsTab({ products }) {
           <p className="text-slate-500">No finished goods found</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function FinishedGoodStockAdjustmentModal({ product, onClose, onAdjust }) {
+  const [batches, setBatches] = useState([]);
+  const [adjustments, setAdjustments] = useState([]);
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadBatches() {
+      try {
+        const batchData = await inventoryService.getBatchesForProduct(product.Id);
+        setBatches(batchData);
+        setAdjustments(batchData.map(batch => ({
+          batchNumber: batch.batchNumber,
+          currentQuantity: batch.quantity,
+          adjustment: 0
+        })));
+      } catch (error) {
+        console.error('Failed to load batches:', error);
+        toast.error('Failed to load batch information');
+      }
+    }
+    
+    if (product) {
+      loadBatches();
+    }
+  }, [product]);
+
+  const handleAdjustmentChange = (batchNumber, adjustment) => {
+    setAdjustments(prev => prev.map(adj => 
+      adj.batchNumber === batchNumber 
+        ? { ...adj, adjustment: parseInt(adjustment) || 0 }
+        : adj
+    ));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const validAdjustments = adjustments.filter(adj => adj.adjustment !== 0);
+    if (validAdjustments.length === 0) {
+      toast.error('Please enter at least one adjustment');
+      return;
+    }
+
+    if (!reason.trim()) {
+      toast.error('Please provide a reason for the adjustment');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await onAdjust(product.Id, validAdjustments, reason);
+      onClose();
+    } catch (error) {
+      console.error('Adjustment failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalAdjustment = adjustments.reduce((sum, adj) => sum + adj.adjustment, 0);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Adjust Stock</h2>
+            <p className="text-sm text-secondary">{product.name}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            <ApperIcon name="X" size={16} />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-3">
+              Batch Adjustments
+            </label>
+            <div className="space-y-3">
+              {adjustments.map((adj) => (
+                <div key={adj.batchNumber} className="flex items-center space-x-4 p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium text-slate-900">{adj.batchNumber}</div>
+                    <div className="text-sm text-secondary">Current: {adj.currentQuantity} units</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-secondary">Adjust:</label>
+                    <input
+                      type="number"
+                      value={adj.adjustment}
+                      onChange={(e) => handleAdjustmentChange(adj.batchNumber, e.target.value)}
+                      className="w-20 px-2 py-1 border rounded text-center focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="text-sm font-medium">
+                    New: {adj.currentQuantity + adj.adjustment}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Reason for Adjustment <span className="text-error">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              rows="3"
+              placeholder="Enter reason for stock adjustment..."
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+            <span className="font-medium text-slate-700">Total Adjustment:</span>
+            <span className={`font-semibold ${
+              totalAdjustment > 0 ? 'text-success' : 
+              totalAdjustment < 0 ? 'text-error' : 
+              'text-slate-600'
+            }`}>
+              {totalAdjustment > 0 ? '+' : ''}{totalAdjustment} units
+            </span>
+          </div>
+
+          <div className="flex space-x-3">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              loading={loading}
+              disabled={totalAdjustment === 0 || !reason.trim()}
+              className="flex-1"
+            >
+              Apply Adjustment
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function WorkOrderCreationModal({ product, onClose, onCreate }) {
+  const [quantity, setQuantity] = useState('');
+  const [priority, setPriority] = useState('medium');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const qty = parseInt(quantity);
+    if (!qty || qty <= 0) {
+      toast.error('Please enter a valid quantity');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await onCreate(product.Id, qty, priority);
+      onClose();
+    } catch (error) {
+      console.error('Work order creation failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white rounded-lg p-6 w-full max-w-lg"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Create Work Order</h2>
+            <p className="text-sm text-secondary">{product.name}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            <ApperIcon name="X" size={16} />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Quantity to Produce <span className="text-error">*</span>
+            </label>
+            <input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Enter quantity..."
+              min="1"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Priority
+            </label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="low">Low Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="high">High Priority</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Notes (Optional)
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              rows="3"
+              placeholder="Additional notes or requirements..."
+            />
+          </div>
+
+          <div className="flex space-x-3">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              loading={loading}
+              className="flex-1"
+            >
+              Create Work Order
+            </Button>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 }
