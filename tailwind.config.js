@@ -21,8 +21,11 @@ export default {
         secondary: '#64748b',
         accent: '#0ea5e9',
         surface: '#ffffff',
-        background: '#f8fafc',
-        success: '#10b981',
+background: '#f8fafc',
+        success: {
+          DEFAULT: '#10b981',
+          600: '#059669',
+        },
         warning: '#f59e0b',
         error: '#ef4444',
         info: '#3b82f6'

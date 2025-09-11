@@ -19,6 +19,8 @@ import * as alertService from "@/services/api/alertService";
 import * as machineService from "@/services/api/machineService";
 import * as activityService from "@/services/api/activityService";
 import * as workOrderService from "@/services/api/workOrderService";
+
+const Dashboard = () => {
 const Dashboard = () => {
   const [productionLines, setProductionLines] = useState([]);
   const [machines, setMachines] = useState([]);
@@ -193,11 +195,12 @@ const Dashboard = () => {
 </Card>
             )}
         </div>
-        </div>
-        {/* Sidebar - Alerts & Activity */}
-        <div className="space-y-6">
-          {/* Alerts */}
-          <div>
+      </div>
+      
+      {/* Sidebar - Alerts & Activity */}
+      <div className="space-y-6">
+        {/* Alerts */}
+        <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-slate-900">
                 Priority Alerts
