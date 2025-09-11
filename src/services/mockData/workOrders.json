@@ -1,0 +1,304 @@
+[
+  {
+    "Id": 1,
+    "jobId": "WO-2024-001",
+    "productName": "Widget Assembly Pro",
+    "quantity": 500,
+    "priority": "High",
+    "status": "In Progress",
+    "customerName": "Acme Corporation",
+    "dueDate": "2024-01-20T00:00:00Z",
+    "createdDate": "2024-01-15T08:00:00Z",
+    "assignedLine": "Assembly Line A",
+    "currentStage": "Production",
+    "stageProgress": 65,
+    "materialRequirements": [
+      {
+        "name": "Base Component",
+        "required": 500,
+        "available": 450,
+        "status": "Low"
+      },
+      {
+        "name": "Connector Parts",
+        "required": 1000,
+        "available": 1200,
+        "status": "Available"
+      },
+      {
+        "name": "Packaging Material",
+        "required": 500,
+        "available": 600,
+        "status": "Available"
+      }
+    ],
+    "stages": [
+      {
+        "name": "Setup",
+        "status": "Complete",
+        "progress": 100,
+        "startTime": "2024-01-16T08:00:00Z",
+        "endTime": "2024-01-16T09:30:00Z"
+      },
+      {
+        "name": "Production",
+        "status": "In Progress",
+        "progress": 65,
+        "startTime": "2024-01-16T09:30:00Z",
+        "endTime": null
+      },
+      {
+        "name": "Quality Check",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      },
+      {
+        "name": "Complete",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      }
+    ]
+  },
+  {
+    "Id": 2,
+    "jobId": "WO-2024-002",
+    "productName": "Component Pack Standard",
+    "quantity": 300,
+    "priority": "Medium",
+    "status": "Pending",
+    "customerName": "Tech Solutions Inc",
+    "dueDate": "2024-01-25T00:00:00Z",
+    "createdDate": "2024-01-15T10:30:00Z",
+    "assignedLine": "Assembly Line B",
+    "currentStage": "Setup",
+    "stageProgress": 25,
+    "materialRequirements": [
+      {
+        "name": "Standard Components",
+        "required": 300,
+        "available": 350,
+        "status": "Available"
+      },
+      {
+        "name": "Labels",
+        "required": 300,
+        "available": 280,
+        "status": "Low"
+      }
+    ],
+    "stages": [
+      {
+        "name": "Setup",
+        "status": "In Progress",
+        "progress": 25,
+        "startTime": "2024-01-17T08:00:00Z",
+        "endTime": null
+      },
+      {
+        "name": "Production",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      },
+      {
+        "name": "Quality Check",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      },
+      {
+        "name": "Complete",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      }
+    ]
+  },
+  {
+    "Id": 3,
+    "jobId": "WO-2024-003",
+    "productName": "Quality Control Module",
+    "quantity": 100,
+    "priority": "High",
+    "status": "Complete",
+    "customerName": "Manufacturing Plus",
+    "dueDate": "2024-01-18T00:00:00Z",
+    "createdDate": "2024-01-12T14:00:00Z",
+    "assignedLine": "Quality Control Line",
+    "currentStage": "Complete",
+    "stageProgress": 100,
+    "materialRequirements": [
+      {
+        "name": "Quality Sensors",
+        "required": 100,
+        "available": 100,
+        "status": "Available"
+      },
+      {
+        "name": "Calibration Tools",
+        "required": 10,
+        "available": 15,
+        "status": "Available"
+      }
+    ],
+    "stages": [
+      {
+        "name": "Setup",
+        "status": "Complete",
+        "progress": 100,
+        "startTime": "2024-01-13T08:00:00Z",
+        "endTime": "2024-01-13T10:00:00Z"
+      },
+      {
+        "name": "Production",
+        "status": "Complete",
+        "progress": 100,
+        "startTime": "2024-01-13T10:00:00Z",
+        "endTime": "2024-01-15T16:00:00Z"
+      },
+      {
+        "name": "Quality Check",
+        "status": "Complete",
+        "progress": 100,
+        "startTime": "2024-01-15T16:00:00Z",
+        "endTime": "2024-01-16T12:00:00Z"
+      },
+      {
+        "name": "Complete",
+        "status": "Complete",
+        "progress": 100,
+        "startTime": "2024-01-16T12:00:00Z",
+        "endTime": "2024-01-16T14:00:00Z"
+      }
+    ]
+  },
+  {
+    "Id": 4,
+    "jobId": "WO-2024-004",
+    "productName": "Final Pack Premium",
+    "quantity": 200,
+    "priority": "Low",
+    "status": "Overdue",
+    "customerName": "Global Enterprises",
+    "dueDate": "2024-01-14T00:00:00Z",
+    "createdDate": "2024-01-10T09:00:00Z",
+    "assignedLine": "Packaging Line C",
+    "currentStage": "Quality Check",
+    "stageProgress": 85,
+    "materialRequirements": [
+      {
+        "name": "Premium Packaging",
+        "required": 200,
+        "available": 50,
+        "status": "Critical"
+      },
+      {
+        "name": "Product Manual",
+        "required": 200,
+        "available": 300,
+        "status": "Available"
+      }
+    ],
+    "stages": [
+      {
+        "name": "Setup",
+        "status": "Complete",
+        "progress": 100,
+        "startTime": "2024-01-11T08:00:00Z",
+        "endTime": "2024-01-11T10:30:00Z"
+      },
+      {
+        "name": "Production",
+        "status": "Complete",
+        "progress": 100,
+        "startTime": "2024-01-11T10:30:00Z",
+        "endTime": "2024-01-14T15:00:00Z"
+      },
+      {
+        "name": "Quality Check",
+        "status": "In Progress",
+        "progress": 85,
+        "startTime": "2024-01-14T15:00:00Z",
+        "endTime": null
+      },
+      {
+        "name": "Complete",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      }
+    ]
+  },
+  {
+    "Id": 5,
+    "jobId": "WO-2024-005",
+    "productName": "Custom Assembly Unit",
+    "quantity": 50,
+    "priority": "High",
+    "status": "Pending",
+    "customerName": "Specialty Manufacturing",
+    "dueDate": "2024-01-30T00:00:00Z",
+    "createdDate": "2024-01-16T11:00:00Z",
+    "assignedLine": "Assembly Line A",
+    "currentStage": "Setup",
+    "stageProgress": 0,
+    "materialRequirements": [
+      {
+        "name": "Custom Components",
+        "required": 150,
+        "available": 0,
+        "status": "Critical"
+      },
+      {
+        "name": "Assembly Hardware",
+        "required": 200,
+        "available": 250,
+        "status": "Available"
+      },
+      {
+        "name": "Custom Labels",
+        "required": 50,
+        "available": 60,
+        "status": "Available"
+      }
+    ],
+    "stages": [
+      {
+        "name": "Setup",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      },
+      {
+        "name": "Production",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      },
+      {
+        "name": "Quality Check",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      },
+      {
+        "name": "Complete",
+        "status": "Pending",
+        "progress": 0,
+        "startTime": null,
+        "endTime": null
+      }
+    ]
+  }
+]

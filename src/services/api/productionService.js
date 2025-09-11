@@ -54,3 +54,13 @@ export const remove = async (id) => {
   const deleted = productionLines.splice(index, 1)[0];
   return { ...deleted };
 };
+
+// Re-export work order service functions for integrated access
+export { 
+  getAll as getAllWorkOrders,
+  getById as getWorkOrderById,
+  create as createWorkOrder,
+  update as updateWorkOrder,
+  remove as removeWorkOrder,
+  getMetrics as getWorkOrderMetrics
+} from '@/services/api/workOrderService';

@@ -1,19 +1,23 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import Loading from "@/components/ui/Loading";
+import * as workOrderService from "@/services/api/workOrderService";
 import Error from "@/components/ui/Error";
 import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import GaugeChart from "@/components/molecules/GaugeChart";
+import ActivityItem from "@/components/molecules/ActivityItem";
 import MetricCard from "@/components/molecules/MetricCard";
 import ProductionLineCard from "@/components/molecules/ProductionLineCard";
-import GaugeChart from "@/components/molecules/GaugeChart";
 import AlertItem from "@/components/molecules/AlertItem";
-import ActivityItem from "@/components/molecules/ActivityItem";
 import Card from "@/components/atoms/Card";
+import Header from "@/components/organisms/Header";
+import Production from "@/components/pages/Production";
+import Orders from "@/components/pages/Orders";
 import * as productionService from "@/services/api/productionService";
-import * as machineService from "@/services/api/machineService";
 import * as qualityService from "@/services/api/qualityService";
 import * as alertService from "@/services/api/alertService";
+import * as machineService from "@/services/api/machineService";
 import * as activityService from "@/services/api/activityService";
 
 const Dashboard = () => {
@@ -137,7 +141,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Production Lines */}
-        <div className="xl:col-span-2 space-y-6">
+<div className="xl:col-span-2 space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Production Lines Status</h2>
             {productionLines.length === 0 ? (
@@ -153,6 +157,10 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Work Order Summary */}
+          <WorkOrderSummary />
           </div>
 
           {/* Machine Utilization */}
@@ -250,7 +258,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Production Target Progress */}
+{/* Production Target Progress */}
       <Card>
         <Card.Header>
           <Card.Title>Daily Production Progress</Card.Title>
@@ -288,4 +296,88 @@ const Dashboard = () => {
   );
 };
 
+// Work Order Summary Component
+const WorkOrderSummary = () => {
+  const [workOrderMetrics, setWorkOrderMetrics] = useState({
+    total: 0,
+    pending: 0,
+    inProgress: 0,
+    completed: 0,
+    overdue: 0,
+    completionRate: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadWorkOrderMetrics();
+  }, []);
+
+  const loadWorkOrderMetrics = async () => {
+    try {
+      setLoading(true);
+      const metrics = await workOrderService.getMetrics();
+      setWorkOrderMetrics(metrics);
+    } catch (err) {
+      console.error('Failed to load work order metrics:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <Card.Content className="p-6 flex items-center justify-center">
+          <Loading />
+        </Card.Content>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <Card.Header>
+        <Card.Title>Work Order Status</Card.Title>
+        <Card.Description>
+          Current work order progress and completion metrics
+        </Card.Description>
+      </Card.Header>
+      <Card.Content>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-slate-900">{workOrderMetrics.total}</div>
+            <div className="text-xs text-secondary">Total Orders</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-primary">{workOrderMetrics.inProgress}</div>
+            <div className="text-xs text-secondary">In Progress</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-success">{workOrderMetrics.completed}</div>
+            <div className="text-xs text-secondary">Completed</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-error">{workOrderMetrics.overdue}</div>
+            <div className="text-xs text-secondary">Overdue</div>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="font-medium text-slate-700">Completion Rate</span>
+            <span className="text-secondary">{workOrderMetrics.completionRate}%</span>
+          </div>
+          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-success to-success-600 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${workOrderMetrics.completionRate}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
+          </div>
+        </div>
+      </Card.Content>
+    </Card>
+  );
+};
 export default Dashboard;
