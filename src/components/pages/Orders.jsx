@@ -28,6 +28,54 @@ import productionLinesData from "@/services/mockData/productionLines.json";
 import qualityMetricsData from "@/services/mockData/qualityMetrics.json";
 import finishedGoodsData from "@/services/mockData/finishedGoods.json";
 import activitiesData from "@/services/mockData/activities.json";
+// Utility functions for styling - positioned at module level for global accessibility
+const isOverdue = (deliveryDate, status) => {
+  if (status === 'Delivered') return false;
+  return isAfter(new Date(), parseISO(deliveryDate));
+};
+
+const getStatusColor = (status) => {
+  if (!status) return 'bg-gray-100 text-gray-800';
+  
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'in progress':
+    case 'in-progress':
+      return 'bg-blue-100 text-blue-800';
+    case 'completed':
+      return 'bg-green-100 text-green-800';
+    case 'delivered':
+      return 'bg-success-100 text-success-600';
+    case 'cancelled':
+    case 'canceled':
+      return 'bg-red-100 text-red-800';
+    case 'on hold':
+    case 'on-hold':
+      return 'bg-orange-100 text-orange-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getPriorityColor = (priority) => {
+  if (!priority) return 'bg-gray-100 text-gray-800';
+  
+  switch (priority.toLowerCase()) {
+    case 'low':
+      return 'bg-green-100 text-green-800';
+    case 'medium':
+    case 'normal':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'high':
+      return 'bg-orange-100 text-orange-800';
+    case 'urgent':
+    case 'critical':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -106,55 +154,6 @@ const Orders = () => {
     }
   };
 
-// Utility functions for styling (moved outside component for better organization)
-// Utility functions - moved to top level for global accessibility
-const isOverdue = (deliveryDate, status) => {
-  if (status === 'Delivered') return false;
-  return isAfter(new Date(), parseISO(deliveryDate));
-};
-
-const getStatusColor = (status) => {
-  if (!status) return 'bg-gray-100 text-gray-800';
-  
-  switch (status.toLowerCase()) {
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'in progress':
-    case 'in-progress':
-      return 'bg-blue-100 text-blue-800';
-    case 'completed':
-      return 'bg-green-100 text-green-800';
-    case 'delivered':
-      return 'bg-success-100 text-success-600';
-    case 'cancelled':
-    case 'canceled':
-      return 'bg-red-100 text-red-800';
-    case 'on hold':
-    case 'on-hold':
-      return 'bg-orange-100 text-orange-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getPriorityColor = (priority) => {
-  if (!priority) return 'bg-gray-100 text-gray-800';
-  
-  switch (priority.toLowerCase()) {
-    case 'low':
-      return 'bg-green-100 text-green-800';
-    case 'medium':
-    case 'normal':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'high':
-      return 'bg-orange-100 text-orange-800';
-    case 'urgent':
-    case 'critical':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
 
   if (loading) {
     return (
