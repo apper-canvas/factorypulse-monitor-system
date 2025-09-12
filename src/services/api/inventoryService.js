@@ -37,19 +37,18 @@ const reserveForOrder = async (orderId, productName, quantity) => {
 };
 
 const releaseOrderReservation = async (orderId) => {
+  await delay(300);
+  const index = orderReservations.findIndex(r => r.orderId === parseInt(orderId));
+  if (index > -1) {
+    orderReservations.splice(index, 1);
+    return { success: true, message: `Reservation for order ${orderId} released` };
+  }
+  return { success: false, message: `No reservation found for order ${orderId}` };
+};
+
 const getMaterials = async () => {
   await delay(800);
   return materialsData.map(material => ({
-    ...material,
-    stockLevel: getStockLevel(material.currentStock, material.reorderLevel),
-    reservations: orderReservations.filter(r => r.productName.toLowerCase().includes(material.name.toLowerCase()))
-  }));
-};
-
-const getMaterialById = async (id) => {
-  await delay(400);
-  const material = materialsData.find(m => m.Id === parseInt(id));
-  if (!material) return null;
     ...material,
     stockLevel: getStockLevel(material.currentStock, material.reorderLevel),
     reservations: orderReservations.filter(r => r.productName.toLowerCase().includes(material.name.toLowerCase()))
@@ -237,7 +236,17 @@ function exportMaterialsData(materials, selectedFields = []) {
   // Create download
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
+const link = document.createElement('a');
+link.href = url;
+link.download = `materials-export-${new Date().toISOString().split('T')[0]}.csv`;
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+window.URL.revokeObjectURL(url);
+
+return { success: true, filename: link.download };
+}
+
 // Finished goods service methods
 async function getFinishedGoods() {
   await delay(800);
@@ -327,9 +336,9 @@ async function adjustFinishedGoodStock(productId, adjustments, reason = "") {
         {"field": {"Name": "available_c"}},
         {"field": {"Name": "reserved_c"}},
         {"field": {"Name": "total_c"}},
-        {"field": {"Name": "location_c"}},
+{"field": {"Name": "location_c"}},
         {"field": {"Name": "image_url_c"}},
-{"field": {"Name": "batches_c"}}
+        {"field": {"Name": "batches_c"}}
       ]
     };
     
@@ -405,9 +414,9 @@ async function fulfillOrder(orderId, productName, quantity) {
   
   try {
     // Find product by name
-    const findParams = {
+const findParams = {
       fields: [
-{"field": {"Name": "Id"}},
+        {"field": {"Name": "Id"}},
         {"field": {"Name": "name_c"}},
         {"field": {"Name": "available_c"}},
         {"field": {"Name": "reserved_c"}}
