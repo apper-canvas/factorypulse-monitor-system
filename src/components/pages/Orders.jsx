@@ -107,10 +107,12 @@ const Orders = () => {
   };
 
 // Utility functions for styling (moved outside component for better organization)
+// Utility functions - moved to top level for global accessibility
 const isOverdue = (deliveryDate, status) => {
   if (status === 'Delivered') return false;
   return isAfter(new Date(), parseISO(deliveryDate));
 };
+
 const getStatusColor = (status) => {
   if (!status) return 'bg-gray-100 text-gray-800';
   
