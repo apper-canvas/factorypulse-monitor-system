@@ -364,39 +364,39 @@ const [workOrders, setWorkOrders] = useState([]);
                       >
                         <div className="col-span-3">
                           <div className="flex items-center space-x-2">
-                            <StatusDot status={workOrder.status} size="sm" />
+                            <StatusDot status={workOrder.status_c || workOrder.status} size="sm" />
                             <span className="font-medium text-slate-900">
-                              {workOrder.jobId}
+                              {workOrder.job_id_c || workOrder.jobId}
                             </span>
                           </div>
                         </div>
                         <div className="col-span-3">
                           <span className="text-slate-700 truncate block">
-                            {workOrder.productName}
+                            {workOrder.product_name_c || workOrder.productName}
                           </span>
                         </div>
                         <div className="col-span-2">
                           <span className="text-slate-900 font-medium">
-                            {workOrder.quantity}
+                            {workOrder.quantity_c || workOrder.quantity}
                           </span>
                         </div>
                         <div className="col-span-2">
                           <Badge 
-                            variant={workOrder.priority === 'High' ? 'error' : 
-                                    workOrder.priority === 'Medium' ? 'warning' : 'default'}
+                            variant={(workOrder.priority_c || workOrder.priority) === 'High' ? 'error' : 
+                                    (workOrder.priority_c || workOrder.priority) === 'Medium' ? 'warning' : 'default'}
                             size="sm"
                           >
-                            {workOrder.priority}
+                            {workOrder.priority_c || workOrder.priority}
                           </Badge>
                         </div>
                         <div className="col-span-2">
                           <span className={cn(
                             "text-xs",
-                            new Date(workOrder.dueDate) < new Date() && workOrder.status !== 'Complete'
+                            new Date(workOrder.due_date_c || workOrder.dueDate) < new Date() && (workOrder.status_c || workOrder.status) !== 'Complete'
                               ? "text-error font-medium"
                               : "text-slate-600"
                           )}>
-                            {formatDate(workOrder.dueDate)}
+                            {formatDate(workOrder.due_date_c || workOrder.dueDate)}
                           </span>
                         </div>
                       </motion.div>
@@ -410,24 +410,24 @@ const [workOrders, setWorkOrders] = useState([]);
 
         {/* Right Panel - Work Order Details (60%) */}
         <div className="lg:col-span-6">
-          {selectedWorkOrder ? (
+{selectedWorkOrder ? (
             <Card className="h-full">
               <Card.Header>
                 <div className="flex items-center justify-between">
                   <div>
                     <Card.Title className="flex items-center space-x-3">
-                      <span>{selectedWorkOrder.jobId}</span>
-                      <Badge variant={getStatusVariant(selectedWorkOrder.status)}>
-                        {selectedWorkOrder.status}
+                      <span>{selectedWorkOrder.job_id_c || selectedWorkOrder.jobId}</span>
+                      <Badge variant={getStatusVariant(selectedWorkOrder.status_c || selectedWorkOrder.status)}>
+                        {selectedWorkOrder.status_c || selectedWorkOrder.status}
                       </Badge>
                     </Card.Title>
                     <Card.Description>
-                      {selectedWorkOrder.productName} • {selectedWorkOrder.quantity} units
+                      {selectedWorkOrder.product_name_c || selectedWorkOrder.productName} • {selectedWorkOrder.quantity_c || selectedWorkOrder.quantity} units
                     </Card.Description>
                   </div>
                   <div className="text-right text-sm text-secondary">
-                    <p>Customer: {selectedWorkOrder.customerName}</p>
-                    <p>Due: {formatDate(selectedWorkOrder.dueDate)}</p>
+                    <p>Customer: {selectedWorkOrder.customer_name_c || selectedWorkOrder.customerName}</p>
+                    <p>Due: {formatDate(selectedWorkOrder.due_date_c || selectedWorkOrder.dueDate)}</p>
                   </div>
                 </div>
               </Card.Header>
@@ -437,7 +437,7 @@ const [workOrders, setWorkOrders] = useState([]);
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Production Progress</h3>
                   <div className="space-y-4">
-                    {selectedWorkOrder.stages.map((stage, index) => (
+                    {(selectedWorkOrder.stages_c ? JSON.parse(selectedWorkOrder.stages_c || '[]') : selectedWorkOrder.stages || []).map((stage, index) => (
                       <div key={stage.name} className="border border-slate-200 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-3">
@@ -505,10 +505,10 @@ const [workOrders, setWorkOrders] = useState([]);
                 </div>
 
                 {/* Material Requirements */}
-<div>
+                <div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Material Requirements</h3>
                   <div className="space-y-3">
-                    {selectedWorkOrder.materialRequirements.map((material, index) => (
+                    {(selectedWorkOrder.material_requirements_c ? JSON.parse(selectedWorkOrder.material_requirements_c || '[]') : selectedWorkOrder.materialRequirements || []).map((material, index) => (
                       <div key={index} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50">
                         <div className="flex items-center space-x-4">
                           <div className={cn(
@@ -553,15 +553,15 @@ const [workOrders, setWorkOrders] = useState([]);
                   </div>
                   
                   {/* Material Summary */}
-                  {selectedWorkOrder.estimatedMaterialCost && (
+                  {(selectedWorkOrder.estimated_material_cost_c || selectedWorkOrder.estimatedMaterialCost) && (
                     <div className="mt-4 p-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-medium text-slate-700">Total Material Cost:</span>
                         <span className="font-semibold text-slate-900">
-                          ${selectedWorkOrder.estimatedMaterialCost.toLocaleString()}
+                          ${(selectedWorkOrder.estimated_material_cost_c || selectedWorkOrder.estimatedMaterialCost).toLocaleString()}
                         </span>
                       </div>
-                      {selectedWorkOrder.materialRequirements?.some(m => m.status !== 'Available') && (
+                      {(selectedWorkOrder.material_requirements_c ? JSON.parse(selectedWorkOrder.material_requirements_c || '[]') : selectedWorkOrder.materialRequirements || []).some(m => m.status !== 'Available') && (
                         <div className="flex items-center mt-2 text-warning text-sm">
                           <ApperIcon name="AlertTriangle" size={14} className="mr-1" />
                           <span>Material availability issues detected</span>
@@ -571,153 +571,15 @@ const [workOrders, setWorkOrders] = useState([]);
                   )}
                 </div>
 
-{/* Resource Allocation */}
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Resource Allocation</h3>
-                  <div className="space-y-4">
-                    {/* Assigned Machines */}
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-700 mb-3">Assigned Machines</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="border border-slate-200 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-slate-900">Machine A-01</span>
-                            <Badge variant="success" size="sm">Active</Badge>
-                          </div>
-                          <div className="text-xs text-slate-600 space-y-1">
-                            <p>Location: Assembly Line A</p>
-                            <p>Efficiency: 94%</p>
-                            <p>Last Maintenance: Jan 10, 2024</p>
-                          </div>
-                        </div>
-                        <div className="border border-slate-200 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-slate-900">QC-Scanner-02</span>
-                            <Badge variant="warning" size="sm">Standby</Badge>
-                          </div>
-                          <div className="text-xs text-slate-600 space-y-1">
-                            <p>Location: Quality Control Line</p>
-                            <p>Efficiency: 98%</p>
-                            <p>Calibration: Jan 15, 2024</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Assigned Operators */}
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-700 mb-3">Assigned Operators</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <ApperIcon name="User" className="w-4 h-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-900">Sarah Johnson</p>
-                              <p className="text-xs text-slate-600">Lead Operator • Line A</p>
-                            </div>
-                          </div>
-                          <Badge variant="success" size="sm">On Duty</Badge>
-                        </div>
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <ApperIcon name="User" className="w-4 h-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-900">Mike Chen</p>
-                              <p className="text-xs text-slate-600">QC Specialist • Quality Line</p>
-                            </div>
-                          </div>
-                          <Badge variant="default" size="sm">Scheduled</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes and Attachments */}
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Notes & Attachments</h3>
-                  <div className="space-y-4">
-                    {/* Notes Section */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-slate-700">Production Notes</h4>
-                        <Button variant="outline" size="sm" icon="Plus">
-                          Add Note
-                        </Button>
-                      </div>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-slate-600">Jan 16, 2024 • 2:30 PM</span>
-                            <span className="text-xs text-slate-600">Sarah Johnson</span>
-                          </div>
-                          <p className="text-sm text-slate-900">
-                            Setup completed ahead of schedule. All quality checks passed. Ready to begin production phase.
-                          </p>
-                        </div>
-                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-slate-600">Jan 15, 2024 • 4:15 PM</span>
-                            <span className="text-xs text-slate-600">Mike Chen</span>
-                          </div>
-                          <p className="text-sm text-slate-900">
-                            Material inspection complete. Minor packaging shortage noted - ordered additional supplies.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Attachments Section */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-slate-700">Attachments</h4>
-                        <Button variant="outline" size="sm" icon="Paperclip">
-                          Attach File
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                              <ApperIcon name="FileText" className="w-4 h-4 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900">Production_Specs_v2.pdf</p>
-                              <p className="text-xs text-slate-600">245 KB • Jan 15, 2024</p>
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="sm" icon="Download" />
-                        </div>
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                              <ApperIcon name="Image" className="w-4 h-4 text-green-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900">quality_checklist.jpg</p>
-                              <p className="text-xs text-slate-600">1.2 MB • Jan 16, 2024</p>
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="sm" icon="Download" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Work Order Info */}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
                   <div>
                     <p className="text-sm text-secondary">Assigned Line</p>
-                    <p className="font-medium text-slate-900">{selectedWorkOrder.assignedLine}</p>
+                    <p className="font-medium text-slate-900">{selectedWorkOrder.assigned_line_c || selectedWorkOrder.assignedLine}</p>
                   </div>
                   <div>
                     <p className="text-sm text-secondary">Current Stage</p>
-                    <p className="font-medium text-slate-900">{selectedWorkOrder.currentStage}</p>
+                    <p className="font-medium text-slate-900">{selectedWorkOrder.current_stage_c || selectedWorkOrder.currentStage}</p>
                   </div>
                 </div>
               </Card.Content>
@@ -811,7 +673,7 @@ setLoading(true);
                 Product Name *
               </label>
               <input
-                type="text"
+type="text"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                 value={formData.productName}
                 onChange={(e) => setFormData(prev => ({ ...prev, productName: e.target.value }))}
