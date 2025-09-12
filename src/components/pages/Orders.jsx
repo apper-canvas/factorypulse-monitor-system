@@ -18,16 +18,6 @@ import * as machineService from "@/services/api/machineService";
 import * as activityService from "@/services/api/activityService";
 import * as workOrderService from "@/services/api/workOrderService";
 import * as inventoryService from "@/services/api/inventoryService";
-import alertsData from "@/services/mockData/alerts.json";
-import workOrdersData from "@/services/mockData/workOrders.json";
-import customersData from "@/services/mockData/customers.json";
-import machinesData from "@/services/mockData/machines.json";
-import ordersData from "@/services/mockData/orders.json";
-import materialsData from "@/services/mockData/materials.json";
-import productionLinesData from "@/services/mockData/productionLines.json";
-import qualityMetricsData from "@/services/mockData/qualityMetrics.json";
-import finishedGoodsData from "@/services/mockData/finishedGoods.json";
-import activitiesData from "@/services/mockData/activities.json";
 // Utility functions for styling - positioned at module level for global accessibility
 const isOverdue = (deliveryDate, status) => {
   if (status === 'Delivered') return false;
@@ -108,9 +98,9 @@ const Orders = () => {
       const ordersData = await orderService.getAll(filters);
       setOrders(ordersData);
       
-      // Auto-select first order if none selected
-      if (ordersData.length > 0 && !selectedOrder) {
-        setSelectedOrder(ordersData[0]);
+// Auto-select first order if none selected
+      if (orders.length > 0 && !selectedOrder) {
+        setSelectedOrder(orders[0]);
       }
     } catch (err) {
       setError(err.message);
