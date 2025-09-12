@@ -1,9 +1,15 @@
-// Import mock data from JSON files
-import mockMaterials from '@/services/mockData/materials.json';
-import mockFinishedGoods from '@/services/mockData/finishedGoods.json';
+import mockMaterials from "@/services/mockData/materials.json";
+
+// ApperClient for database operations
+const { ApperClient } = window.ApperSDK;
+const apperClient = new ApperClient({
+  apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+  apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+});
 
 let materialsData = [...mockMaterials];
-let finishedGoodsData = [...mockFinishedGoods];
+// Database table name for finished goods
+const FINISHED_GOODS_TABLE = 'finished_good_c';
 
 // Simulate API delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -31,19 +37,19 @@ const reserveForOrder = async (orderId, productName, quantity) => {
 };
 
 const releaseOrderReservation = async (orderId) => {
-  await delay(200);
-  const index = orderReservations.findIndex(r => r.orderId === parseInt(orderId));
-  if (index !== -1) {
-    orderReservations.splice(index, 1);
-    return true;
-  }
-  return false;
+const getMaterials = async () => {
+  await delay(800);
+  return materialsData.map(material => ({
+    ...material,
+    stockLevel: getStockLevel(material.currentStock, material.reorderLevel),
+    reservations: orderReservations.filter(r => r.productName.toLowerCase().includes(material.name.toLowerCase()))
+  }));
 };
 
-// Materials service methods
-const getMaterials = async () => {
-await delay(800);
-  return materialsData.map(material => ({
+const getMaterialById = async (id) => {
+  await delay(400);
+  const material = materialsData.find(m => m.Id === parseInt(id));
+  if (!material) return null;
     ...material,
     stockLevel: getStockLevel(material.currentStock, material.reorderLevel),
     reservations: orderReservations.filter(r => r.productName.toLowerCase().includes(material.name.toLowerCase()))
@@ -232,161 +238,324 @@ function exportMaterialsData(materials, selectedFields = []) {
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = url;
-  link.download = `materials-export-${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
-  
-  return { success: true, recordCount: materials.length };
-}
 // Finished goods service methods
 async function getFinishedGoods() {
   await delay(800);
-  return mockFinishedGoods.map(product => ({
-    ...product,
-    reservations: orderReservations.filter(r => 
-      r.productName.toLowerCase() === product.name.toLowerCase()
-    ),
-    availableForOrder: product.available - orderReservations
-      .filter(r => r.productName.toLowerCase() === product.name.toLowerCase())
-      .reduce((sum, r) => sum + r.quantity, 0)
-  }));
+  try {
+    const params = {
+      fields: [
+        {"field": {"Name": "Id"}},
+        {"field": {"Name": "Name"}},
+        {"field": {"Name": "name_c"}},
+        {"field": {"Name": "available_c"}},
+        {"field": {"Name": "reserved_c"}},
+        {"field": {"Name": "total_c"}},
+        {"field": {"Name": "location_c"}},
+        {"field": {"Name": "image_url_c"}},
+        {"field": {"Name": "batches_c"}}
+      ],
+orderBy: [{"fieldName": "Name", "sorttype": "ASC"}]
+    };
+    
+    const response = await apperClient.fetchRecords(FINISHED_GOODS_TABLE, params);
+    
+    if (!response.success) {
+      console.error('Failed to fetch finished goods:', response.message);
+      return [];
+    }
+    
+    return (response.data || []).map(product => ({
+      ...product,
+      reservations: orderReservations.filter(r => 
+        r.productName.toLowerCase() === product.name.toLowerCase()
+      ),
+      availableForOrder: product.available - orderReservations
+        .filter(r => r.productName.toLowerCase() === product.name.toLowerCase())
+        .reduce((sum, r) => sum + r.quantity, 0)
+    }));
+  } catch (error) {
+    console.error('Failed to fetch finished goods:', error);
+    return [];
+  }
 }
-
 async function getFinishedGoodById(id) {
   await delay(500);
-  const product = finishedGoodsData.find(fg => fg.Id === parseInt(id));
-  if (!product) return null;
-  
-  const reservations = orderReservations.filter(r => 
-    r.productName.toLowerCase() === product.name.toLowerCase()
-  );
-  const reservedQuantity = reservations.reduce((sum, r) => sum + r.quantity, 0);
-  
-  return {
-    ...product,
-    reservations,
-    availableForOrder: product.available - reservedQuantity
-  };
+  try {
+    const params = {
+      fields: [
+        {"field": {"Name": "Id"}},
+        {"field": {"Name": "name_c"}},
+        {"field": {"Name": "available_c"}},
+        {"field": {"Name": "reserved_c"}},
+        {"field": {"Name": "total_c"}},
+        {"field": {"Name": "batches_c"}}
+      ]
+    };
+    
+    const response = await apperClient.getRecordById(FINISHED_GOODS_TABLE, parseInt(id), params);
+    
+    if (!response.success || !response.data) {
+      return null;
+    }
+    
+    const product = response.data;
+    const reservations = orderReservations.filter(r => 
+      r.productName.toLowerCase() === product.name_c?.toLowerCase()
+    );
+    const reservedQuantity = reservations.reduce((sum, r) => sum + r.quantity, 0);
+    
+    return {
+      ...product,
+      reservations,
+      availableForOrder: (product.available_c || 0) - reservedQuantity
+    };
+  } catch (error) {
+    console.error('Failed to get finished good by ID:', error);
+    return null;
+  }
 }
 
 async function adjustFinishedGoodStock(productId, adjustments, reason = "") {
   await delay(1000);
   
-  const product = mockFinishedGoods.find(p => p.Id === parseInt(productId));
-  if (!product) {
-    throw new Error('Product not found');
-  }
-
-  // Update quantities based on batch adjustments
-  adjustments.forEach(adj => {
-    const batch = product.batches.find(b => b.batchNumber === adj.batchNumber);
-    if (batch) {
-      batch.quantity = Math.max(0, batch.quantity + adj.adjustment);
+  try {
+    const params = {
+      fields: [
+        {"field": {"Name": "Id"}},
+        {"field": {"Name": "Name"}},
+        {"field": {"Name": "name_c"}},
+        {"field": {"Name": "available_c"}},
+        {"field": {"Name": "reserved_c"}},
+        {"field": {"Name": "total_c"}},
+        {"field": {"Name": "location_c"}},
+        {"field": {"Name": "image_url_c"}},
+{"field": {"Name": "batches_c"}}
+      ]
+    };
+    
+    const response = await apperClient.getRecordById(FINISHED_GOODS_TABLE, parseInt(productId), params);
+    
+    if (!response.success || !response.data) {
+      console.error(`Product ${productId} not found:`, response.message);
+      return null;
     }
-  });
+    
+    const product = response.data;
+    
+    // Parse batches from JSON string
+    let batches = [];
+    try {
+      batches = JSON.parse(product.batches_c || '[]');
+    } catch (e) {
+      console.warn('Invalid batch data, using empty array');
+    }
 
-  // Recalculate totals
-  const totalAdjustment = adjustments.reduce((sum, adj) => sum + adj.adjustment, 0);
-  product.available = Math.max(0, product.available + totalAdjustment);
-  product.total = Math.max(0, product.total + totalAdjustment);
+    // Update quantities based on batch adjustments
+    adjustments.forEach(adj => {
+      const batch = batches.find(b => b.batchNumber === adj.batchNumber);
+      if (batch) {
+        batch.quantity = Math.max(0, batch.quantity + adj.adjustment);
+      }
+    });
 
-  // Log adjustment for audit trail
-  console.log(`Stock adjustment for ${product.name}:`, {
-    adjustments,
-    reason,
-    newAvailable: product.available,
-    timestamp: new Date().toISOString()
-  });
+    // Recalculate totals
+    const totalAdjustment = adjustments.reduce((sum, adj) => sum + adj.adjustment, 0);
+    const newAvailable = Math.max(0, (product.available_c || 0) + totalAdjustment);
+    const newTotal = Math.max(0, (product.total_c || 0) + totalAdjustment);
 
-  return { ...product };
+    // Update the product record
+    const updateParams = {
+      records: [{
+        Id: parseInt(productId),
+        available_c: newAvailable,
+        total_c: newTotal,
+        batches_c: JSON.stringify(batches)
+      }]
+    };
+    
+    const updateResponse = await apperClient.updateRecord(FINISHED_GOODS_TABLE, updateParams);
+    
+    if (!updateResponse.success) {
+      throw new Error(updateResponse.message || 'Failed to update stock');
+    }
+
+    // Log adjustment for audit trail
+    console.log(`Stock adjustment for ${product.name_c}:`, {
+      adjustments,
+      reason,
+      newAvailable,
+      timestamp: new Date().toISOString()
+    });
+
+    return { 
+      ...product,
+      available_c: newAvailable,
+      total_c: newTotal,
+      batches_c: JSON.stringify(batches)
+    };
+  } catch (error) {
+    console.error('Stock adjustment failed:', error);
+    throw error;
+  }
 }
 
 // Order fulfillment functions
 async function fulfillOrder(orderId, productName, quantity) {
   await delay(600);
   
-  // Find product in finished goods
-  const product = mockFinishedGoods.find(p => 
-    p.name.toLowerCase() === productName.toLowerCase()
-  );
-  
-  if (!product) {
-    throw new Error(`Product ${productName} not found in inventory`);
+  try {
+    // Find product by name
+    const findParams = {
+      fields: [
+{"field": {"Name": "Id"}},
+        {"field": {"Name": "name_c"}},
+        {"field": {"Name": "available_c"}},
+        {"field": {"Name": "reserved_c"}}
+      ],
+      where: [{"FieldName": "name_c", "Operator": "EqualTo", "Values": [productName]}]
+    };
+    
+    const findResponse = await apperClient.fetchRecords(FINISHED_GOODS_TABLE, findParams);
+    
+    if (!findResponse.success || !findResponse.data || findResponse.data.length === 0) {
+      throw new Error(`Product ${productName} not found`);
+    }
+    
+    const product = findResponse.data[0];
+    
+    if ((product.available_c || 0) < quantity) {
+      throw new Error(`Insufficient stock. Available: ${product.available_c || 0}, Required: ${quantity}`);
+    }
+    
+    // Update quantities (reduce available, reduce reserved)
+    const updateParams = {
+      records: [{
+        Id: product.Id,
+        available_c: (product.available_c || 0) - quantity,
+        reserved_c: Math.max(0, (product.reserved_c || 0) - quantity)
+      }]
+    };
+    
+    const updateResponse = await apperClient.updateRecord(FINISHED_GOODS_TABLE, updateParams);
+    
+    if (!updateResponse.success) {
+      throw new Error(updateResponse.message || 'Failed to fulfill order');
+    }
+    
+    // Release reservation if exists
+    await releaseOrderReservation(orderId);
+    
+    return {
+      success: true,
+      orderId: parseInt(orderId),
+      productName,
+      quantityFulfilled: quantity,
+      remainingInventory: (product.available_c || 0) - quantity,
+      fulfilledAt: new Date().toISOString(),
+      message: `Order ${orderId} fulfilled: ${quantity} units of ${productName}`
+    };
+  } catch (error) {
+    console.error('Order fulfillment failed:', error);
+    throw error;
   }
-  
-  if (product.available < quantity) {
-    throw new Error(`Insufficient inventory for ${productName}. Available: ${product.available}, Required: ${quantity}`);
-  }
-  
-  // Reduce available inventory
-  product.available -= quantity;
-  
-  // Release reservation if exists
-  await releaseOrderReservation(orderId);
-  
-  return {
-    orderId: parseInt(orderId),
-    productName,
-    quantityFulfilled: quantity,
-    remainingInventory: product.available,
-    fulfilledAt: new Date().toISOString()
-  };
 }
 
+// Get order fulfillment status
 async function getOrderFulfillmentStatus(orderId) {
   await delay(200);
+  
   const reservation = orderReservations.find(r => r.orderId === parseInt(orderId));
   
   if (!reservation) {
-    return { status: 'Not Reserved', orderId: parseInt(orderId) };
+    return { 
+      status: 'Not Reserved', 
+      orderId: parseInt(orderId) 
+    };
   }
   
-  const product = mockFinishedGoods.find(p => 
-    p.name.toLowerCase() === reservation.productName.toLowerCase()
-  );
-  
+  // Return mock status for now - this would typically check order records
   return {
     orderId: parseInt(orderId),
-    status: reservation.status,
-    productName: reservation.productName,
+    status: reservation.status || 'Reserved',
+productName: reservation.productName,
     reservedQuantity: reservation.quantity,
-    availableInventory: product ? product.available : 0,
-    canFulfill: product ? product.available >= reservation.quantity : false,
-    reservedAt: reservation.reservedAt
+    reservedAt: reservation.reservedAt,
+    fulfilledAt: new Date().toISOString(),
+    items: []
   };
 }
 
+// Get batches for a specific product
 async function getBatchesForProduct(productId) {
   await delay(300);
-  const product = mockFinishedGoods.find(p => p.Id === parseInt(productId));
-  return product ? [...product.batches] : [];
+  
+  try {
+    const params = {
+      fields: [
+        {"field": {"Name": "Id"}},
+        {"field": {"Name": "batches_c"}}
+      ]
+    };
+    
+    const response = await apperClient.getRecordById(FINISHED_GOODS_TABLE, parseInt(productId), params);
+    
+    if (!response.success || !response.data) {
+      console.error(`Product ${productId} not found:`, response.message);
+      return [];
+    }
+    
+    const product = response.data;
+    
+    // Parse batches from the product's batches_c field (MultilineText)
+    try {
+      const batchesText = product.batches_c || '[]';
+      const batches = JSON.parse(batchesText);
+      return batches.map(batch => ({
+        batchNumber: batch.batchNumber || `BATCH-${Date.now()}`,
+        quantity: batch.quantity || 0,
+        productionDate: batch.productionDate || new Date().toISOString().split('T')[0],
+        expiryDate: batch.expiryDate || null,
+        location: batch.location || 'Unknown'
+      }));
+    } catch (parseError) {
+      console.warn('Failed to parse batch data:', parseError);
+      return [];
+    }
+  } catch (error) {
+    console.error('Failed to get batches:', error);
+    return [];
+  }
 }
 
-async function createWorkOrderForProduct(productId, quantity, priority = 'medium') {
-  await delay(1200);
+// Create work order for product
+async function createWorkOrderForProduct(productId, quantity, priority = 'normal') {
+  await delay(500);
   
-  const product = mockFinishedGoods.find(p => p.Id === parseInt(productId));
-  if (!product) {
-    throw new Error('Product not found');
+  try {
+    const product = await getFinishedGoodById(productId);
+    
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    // Create work order object
+    const workOrder = {
+      Id: Date.now(), // Simple ID generation for mock
+      productName: product.name_c || product.Name,
+      productId: productId,
+      quantity: quantity,
+      priority: priority,
+      status: 'planned',
+      createdAt: new Date().toISOString(),
+      estimatedCompletion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+    };
+
+    console.log('Work order created:', workOrder);
+    return workOrder;
+  } catch (error) {
+    console.error('Failed to create work order:', error);
+    throw error;
   }
-
-  // Create work order object
-  const workOrder = {
-    Id: Date.now(), // Simple ID generation for mock
-    productName: product.name,
-    productId: productId,
-    quantity: quantity,
-    priority: priority,
-    status: 'planned',
-    createdAt: new Date().toISOString(),
-    estimatedCompletion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
-  };
-
-  console.log('Work order created:', workOrder);
-  return workOrder;
 }
 
 // Low stock alerts service method
@@ -398,27 +567,10 @@ const getLowStockAlerts = async () => {
   ).map(material => ({
     ...material,
     alertType: material.stockLevel === 'critical' ? 'critical' : 'warning',
-    message: `${material.name} is ${material.stockLevel === 'critical' ? 'critically' : ''} low on stock`
+message: `${material.name} is ${material.stockLevel === 'critical' ? 'critically' : ''} low on stock`
   }));
 };
 
-// Named exports for individual functions
-export {
-  getMaterials,
-getMaterialById,
-  addMaterial,
-  updateMaterial,
-  bulkUpdateQuantities,
-  bulkUpdateReorderPoints,
-  adjustStock,
-  exportMaterialsData,
-  getLowStockAlerts,
-  getFinishedGoods,
-  getFinishedGoodById,
-  adjustFinishedGoodStock,
-  getBatchesForProduct,
-  createWorkOrderForProduct
-};
 // Calculate total material requirements for pending work orders
 const getMaterialRequirementsForWorkOrders = async () => {
   await delay(200);
@@ -429,7 +581,7 @@ const getMaterialRequirementsForWorkOrders = async () => {
     { materialId: 1, materialName: "Steel Sheets", totalRequired: 150, pendingWorkOrders: 3 },
     { materialId: 2, materialName: "Aluminum Rods", totalRequired: 75, pendingWorkOrders: 2 },
     { materialId: 3, materialName: "Copper Wire", totalRequired: 500, pendingWorkOrders: 4 }
-  ];
+];
 };
 
 // Get materials with work order demand information
@@ -450,6 +602,30 @@ const getMaterialsWithDemand = async () => {
   });
 };
 
+// Named exports for individual functions
+export {
+  getMaterials,
+  getMaterialById,
+  addMaterial,
+  updateMaterial,
+  bulkUpdateQuantities,
+  bulkUpdateReorderPoints,
+  adjustStock,
+  exportMaterialsData,
+  getLowStockAlerts,
+  getFinishedGoods,
+  getFinishedGoodById,
+  adjustFinishedGoodStock,
+  getBatchesForProduct,
+  createWorkOrderForProduct,
+  fulfillOrder,
+  getOrderFulfillmentStatus,
+  reserveForOrder,
+  releaseOrderReservation,
+  getMaterialRequirementsForWorkOrders,
+  getMaterialsWithDemand
+};
+
 // Default export object containing all functions
 const inventoryService = {
   getMaterials,
@@ -466,6 +642,10 @@ const inventoryService = {
   adjustFinishedGoodStock,
   getBatchesForProduct,
   createWorkOrderForProduct,
+  fulfillOrder,
+  getOrderFulfillmentStatus,
+  reserveForOrder,
+  releaseOrderReservation,
   getMaterialRequirementsForWorkOrders,
   getMaterialsWithDemand
 };
