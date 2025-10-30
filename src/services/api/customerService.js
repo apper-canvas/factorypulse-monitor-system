@@ -1,52 +1,138 @@
-import customersData from '@/services/mockData/customers.json';
-
-// In-memory storage for runtime changes
-let customers = [...customersData];
+// Get ApperClient singleton instance
+const getApperClient = () => {
+  if (window.ApperSDK) {
+    const { ApperClient } = window.ApperSDK;
+    return new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+  }
+  return null;
+};
 
 export const customerService = {
   // Get all customers
-  getAll: async () => {
+getAll: async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      return customers.map(customer => ({ ...customer }));
+      const apperClient = getApperClient();
+      if (!apperClient) {
+        console.error('ApperClient not initialized');
+        return [];
+      }
+
+      const response = await apperClient.fetchRecords('customer_c', {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "name_c"}},
+          {"field": {"Name": "email_c"}},
+          {"field": {"Name": "phone_c"}},
+          {"field": {"Name": "company_c"}},
+          {"field": {"Name": "status_c"}},
+          {"field": {"Name": "total_orders_c"}}
+        ]
+      });
+
+      if (!response.success) {
+        console.error('Failed to fetch customers:', response.message);
+        return [];
+      }
+
+      return response.data || [];
     } catch (error) {
       console.error('Failed to fetch customers:', error);
-      throw new Error('Failed to load customers');
+      return [];
     }
   },
 
   // Get customer by ID
-  getById: async (id) => {
+getById: async (id) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 150));
-      const customer = customers.find(c => c.Id === parseInt(id));
-      if (!customer) {
-        throw new Error(`Customer with ID ${id} not found`);
+      const apperClient = getApperClient();
+      if (!apperClient) {
+        console.error('ApperClient not initialized');
+        return null;
       }
-      return { ...customer };
+
+      const response = await apperClient.getRecordById('customer_c', parseInt(id), {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "name_c"}},
+          {"field": {"Name": "email_c"}},
+          {"field": {"Name": "phone_c"}},
+          {"field": {"Name": "company_c"}},
+          {"field": {"Name": "status_c"}},
+          {"field": {"Name": "total_orders_c"}}
+        ]
+      });
+
+      if (!response.success) {
+        console.error(`Failed to fetch customer ${id}:`, response.message);
+        return null;
+      }
+
+      return response.data || null;
     } catch (error) {
       console.error(`Failed to fetch customer ${id}:`, error);
-      throw error;
+      return null;
     }
   },
 
   // Search customers by name
-  search: async (query) => {
+search: async (query) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
       if (!query || query.length < 2) return [];
-      
-      const searchTerm = query.toLowerCase();
-      return customers
-        .filter(customer => 
-          customer.name.toLowerCase().includes(searchTerm) ||
-          customer.company.toLowerCase().includes(searchTerm)
-        )
-        .slice(0, 10)
-        .map(customer => ({ ...customer }));
+
+      const apperClient = getApperClient();
+      if (!apperClient) {
+        console.error('ApperClient not initialized');
+        return [];
+      }
+
+      const response = await apperClient.fetchRecords('customer_c', {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "name_c"}},
+          {"field": {"Name": "email_c"}},
+          {"field": {"Name": "phone_c"}},
+          {"field": {"Name": "company_c"}},
+          {"field": {"Name": "status_c"}},
+          {"field": {"Name": "total_orders_c"}}
+        ],
+        whereGroups: [{
+          "operator": "OR",
+          "subGroups": [
+            {
+              "conditions": [
+                {
+                  "fieldName": "name_c",
+                  "operator": "Contains",
+                  "values": [query]
+                },
+                {
+                  "fieldName": "company_c",
+                  "operator": "Contains",
+                  "values": [query]
+                }
+              ],
+              "operator": "OR"
+            }
+          ]
+        }],
+        pagingInfo: {
+          "limit": 10,
+          "offset": 0
+        }
+      });
+
+      if (!response.success) {
+        console.error('Failed to search customers:', response.message);
+        return [];
+      }
+
+      return response.data || [];
     } catch (error) {
       console.error('Failed to search customers:', error);
-      throw error;
+      return [];
     }
   }
 };
