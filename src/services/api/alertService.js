@@ -1,28 +1,94 @@
-import alertsData from "@/services/mockData/alerts.json";
+// Helper function to get ApperClient instance
+function getApperClient() {
+  if (!window.ApperSDK) {
+    console.error('ApperSDK not available');
+    return null;
+  }
+  
+  const { ApperClient } = window.ApperSDK;
+  return new ApperClient({
+    apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+    apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+  });
+}
 
 // Simulate API delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-let alerts = [...alertsData];
-
 export const getAll = async () => {
   await delay(200);
+  const apperClient = getApperClient();
+  if (!apperClient) {
+    throw new Error('ApperClient not initialized');
+  }
+
+  const params = {
+    fields: [
+      { field: { Name: "Id" } },
+      { field: { Name: "message_c" } },
+      { field: { Name: "priority_c" } },
+      { field: { Name: "status_c" } },
+      { field: { Name: "type_c" } },
+      { field: { Name: "source_c" } },
+      { field: { Name: "timestamp_c" } }
+    ]
+  };
+
+  const response = await apperClient.getRecords('alert_c', params);
+  
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to fetch alerts');
+  }
+
+  const alerts = response.data || [];
+  
   // Sort by timestamp (newest first) and then by priority
   const priorityOrder = { "Critical": 4, "High": 3, "Medium": 2, "Low": 1 };
-  return [...alerts].sort((a, b) => {
-    if (a.acknowledged !== b.acknowledged) {
-      return a.acknowledged - b.acknowledged; // Unacknowledged first
+  return alerts.sort((a, b) => {
+    const aStatus = a.status_c || 'unacknowledged';
+    const bStatus = b.status_c || 'unacknowledged';
+    const aAcknowledged = aStatus === 'acknowledged';
+    const bAcknowledged = bStatus === 'acknowledged';
+    
+    if (aAcknowledged !== bAcknowledged) {
+      return aAcknowledged - bAcknowledged; // Unacknowledged first
     }
-    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-      return priorityOrder[b.priority] - priorityOrder[a.priority]; // Higher priority first
+    const aPriority = priorityOrder[a.priority_c] || 0;
+    const bPriority = priorityOrder[b.priority_c] || 0;
+    if (aPriority !== bPriority) {
+      return bPriority - aPriority; // Higher priority first
     }
-    return new Date(b.timestamp) - new Date(a.timestamp); // Newer first
+    const aTime = new Date(a.timestamp_c || 0);
+    const bTime = new Date(b.timestamp_c || 0);
+    return bTime - aTime; // Newer first
   });
 };
 
 export const getById = async (id) => {
   await delay(150);
-  const alert = alerts.find(item => item.Id === parseInt(id));
+const apperClient = getApperClient();
+  if (!apperClient) {
+    throw new Error('ApperClient not initialized');
+  }
+
+  const params = {
+    fields: [
+      { field: { Name: "Id" } },
+      { field: { Name: "message_c" } },
+      { field: { Name: "priority_c" } },
+      { field: { Name: "status_c" } },
+      { field: { Name: "type_c" } },
+      { field: { Name: "source_c" } },
+      { field: { Name: "timestamp_c" } }
+    ]
+  };
+
+  const response = await apperClient.getRecordById('alert_c', id, params);
+  
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to fetch alert');
+  }
+
+  const alert = response.data;
   if (!alert) {
     throw new Error("Alert not found");
   }
@@ -31,40 +97,99 @@ export const getById = async (id) => {
 
 export const getUnacknowledged = async () => {
   await delay(200);
-  const unacknowledged = alerts.filter(alert => !alert.acknowledged);
+  const allAlerts = await getAll();
+  const unacknowledged = allAlerts.filter(alert => {
+    const status = alert.status_c || 'unacknowledged';
+    return status !== 'acknowledged';
+  });
+  
   const priorityOrder = { "Critical": 4, "High": 3, "Medium": 2, "Low": 1 };
   return unacknowledged.sort((a, b) => {
-    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-      return priorityOrder[b.priority] - priorityOrder[a.priority];
+    const aPriority = priorityOrder[a.priority_c] || 0;
+    const bPriority = priorityOrder[b.priority_c] || 0;
+    if (aPriority !== bPriority) {
+      return bPriority - aPriority;
     }
-    return new Date(b.timestamp) - new Date(a.timestamp);
+    const aTime = new Date(a.timestamp_c || 0);
+    const bTime = new Date(b.timestamp_c || 0);
+    return bTime - aTime;
   });
 };
 
 export const create = async (alertData) => {
   await delay(300);
-  const maxId = Math.max(...alerts.map(item => item.Id), 0);
-  const newAlert = {
-    Id: maxId + 1,
-    ...alertData,
-    timestamp: new Date().toISOString(),
-    acknowledged: false
+const apperClient = getApperClient();
+  if (!apperClient) {
+    throw new Error('ApperClient not initialized');
+  }
+
+  const params = {
+    records: [{
+      message_c: alertData.message,
+      priority_c: alertData.priority,
+      status_c: alertData.status || 'unacknowledged',
+      type_c: alertData.type,
+      source_c: alertData.source,
+      timestamp_c: new Date().toISOString()
+    }]
   };
-  alerts.push(newAlert);
-  return { ...newAlert };
+
+  const response = await apperClient.createRecord('alert_c', params);
+  
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to create alert');
+  }
+
+if (response.results && response.results.length > 0) {
+    const result = response.results[0];
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to create alert');
+    }
+    return result.data;
+  }
+
+  return response.data;
 };
 
 export const update = async (id, updates) => {
   await delay(250);
-  const index = alerts.findIndex(item => item.Id === parseInt(id));
-  if (index === -1) {
-    throw new Error("Alert not found");
+const apperClient = getApperClient();
+  if (!apperClient) {
+    throw new Error('ApperClient not initialized');
   }
-  alerts[index] = { 
-    ...alerts[index], 
-    ...updates
+
+const updateRecord = {
+    Id: parseInt(id)
   };
-  return { ...alerts[index] };
+  
+  if (updates.message !== undefined) updateRecord.message_c = updates.message;
+  if (updates.priority !== undefined) updateRecord.priority_c = updates.priority;
+  if (updates.status !== undefined) updateRecord.status_c = updates.status;
+  if (updates.type !== undefined) updateRecord.type_c = updates.type;
+  if (updates.source !== undefined) updateRecord.source_c = updates.source;
+  if (updates.acknowledged !== undefined) {
+    updateRecord.status_c = updates.acknowledged ? 'acknowledged' : 'unacknowledged';
+  }
+  
+  const params = {
+    records: [updateRecord]
+  };
+
+  const response = await apperClient.updateRecord('alert_c', params);
+  
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to update alert');
+  }
+
+  if (response.results && response.results.length > 0) {
+    const result = response.results[0];
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update alert');
+    }
+    return result.data;
+  }
+
+  return response.data;
 };
 
 export const acknowledge = async (id) => {
@@ -73,10 +198,28 @@ export const acknowledge = async (id) => {
 
 export const remove = async (id) => {
   await delay(200);
-  const index = alerts.findIndex(item => item.Id === parseInt(id));
-  if (index === -1) {
-    throw new Error("Alert not found");
+const apperClient = getApperClient();
+  if (!apperClient) {
+    throw new Error('ApperClient not initialized');
   }
-  const deleted = alerts.splice(index, 1)[0];
-  return { ...deleted };
+
+  const params = {
+    RecordIds: [parseInt(id)]
+  };
+
+  const response = await apperClient.deleteRecord('alert_c', params);
+  
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to delete alert');
+  }
+
+if (response.results && response.results.length > 0) {
+    const result = response.results[0];
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to delete alert');
+    }
+    return true;
+  }
+
+  return true;
 };
