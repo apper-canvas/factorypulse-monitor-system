@@ -1,4 +1,4 @@
-import { getApperClient } from "@/services/apperClient";
+import { getApperClient } from "@/services/apperClient.js";
 
 const apperClient = getApperClient();
 const MATERIAL_TABLE = 'material_c';
