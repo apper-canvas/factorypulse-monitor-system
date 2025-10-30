@@ -1,4 +1,8 @@
-import mockMaterials from "@/services/mockData/materials.json";
+import { getApperClient } from '@/services/apperClient';
+
+const apperClient = getApperClient();
+const MATERIAL_TABLE = 'material_c';
+const FINISHED_GOODS_TABLE = 'finished_good_c';
 
 // ApperClient for database operations
 const { ApperClient } = window.ApperSDK;
@@ -7,7 +11,8 @@ const apperClient = new ApperClient({
   apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
 });
 
-let materialsData = [...mockMaterials];
+// Helper function to simulate API delay
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 // Database table name for finished goods
 const FINISHED_GOODS_TABLE = 'finished_good_c';
 
@@ -15,12 +20,12 @@ const FINISHED_GOODS_TABLE = 'finished_good_c';
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 // Get stock level status
 const getStockLevel = (current, reorder) => {
-  if (current <= reorder * 0.5) return 'critical';
+if (current <= reorder * 0.5) return 'critical';
   if (current <= reorder) return 'low';
   return 'adequate';
 };
 
-// Order fulfillment tracking
+// Order fulfillment tracking (business logic layer - not database backed)
 const orderReservations = [];
 
 const reserveForOrder = async (orderId, productName, quantity) => {
@@ -48,76 +53,203 @@ const releaseOrderReservation = async (orderId) => {
 
 const getMaterials = async () => {
   await delay(800);
-  return materialsData.map(material => ({
-    ...material,
-    stockLevel: getStockLevel(material.currentStock, material.reorderLevel),
-    reservations: orderReservations.filter(r => r.productName.toLowerCase().includes(material.name.toLowerCase()))
-  }));
+  try {
+    const params = {
+      fields: [
+        {"field": {"Name": "Id"}},
+        {"field": {"Name": "name_c"}},
+        {"field": {"Name": "category_c"}},
+        {"field": {"Name": "current_stock_c"}},
+        {"field": {"Name": "unit_c"}},
+        {"field": {"Name": "reorder_level_c"}},
+        {"field": {"Name": "supplier_c"}},
+        {"field": {"Name": "last_updated_c"}}
+      ],
+      orderBy: [{"fieldName": "name_c", "sorttype": "ASC"}]
+    };
+    
+    const response = await apperClient.fetchRecords(MATERIAL_TABLE, params);
+    
+    if (!response.success) {
+      console.error('Failed to fetch materials:', response.message);
+      return [];
+    }
+    
+    return (response.data || []).map(material => ({
+      ...material,
+      currentStock: material.current_stock_c || 0,
+      reorderLevel: material.reorder_level_c || 0,
+      name: material.name_c || '',
+      stockLevel: getStockLevel(material.current_stock_c || 0, material.reorder_level_c || 0),
+      reservations: orderReservations.filter(r => 
+        r.productName.toLowerCase().includes((material.name_c || '').toLowerCase())
+      )
+    }));
+  } catch (error) {
+    console.error('Failed to fetch materials:', error);
+    return [];
+  }
 };
 
 const getMaterialById = async (id) => {
   await delay(400);
-  const material = materialsData.find(m => m.Id === parseInt(id));
-  if (!material) return null;
-  return {
-    ...material,
-    stockLevel: getStockLevel(material.currentStock, material.reorderLevel)
-  };
+  try {
+    const params = {
+      fields: [
+        {"field": {"Name": "Id"}},
+        {"field": {"Name": "name_c"}},
+        {"field": {"Name": "category_c"}},
+        {"field": {"Name": "current_stock_c"}},
+        {"field": {"Name": "unit_c"}},
+        {"field": {"Name": "reorder_level_c"}},
+        {"field": {"Name": "supplier_c"}},
+        {"field": {"Name": "last_updated_c"}}
+      ]
+    };
+    
+    const response = await apperClient.getRecordById(MATERIAL_TABLE, parseInt(id), params);
+    
+    if (!response.success || !response.data) {
+      return null;
+    }
+    
+    const material = response.data;
+    return {
+      ...material,
+      currentStock: material.current_stock_c || 0,
+      reorderLevel: material.reorder_level_c || 0,
+      name: material.name_c || '',
+      stockLevel: getStockLevel(material.current_stock_c || 0, material.reorder_level_c || 0)
+    };
+  } catch (error) {
+    console.error('Failed to get material by ID:', error);
+    return null;
+  }
 };
 
 const addMaterial = async (materialData) => {
   await delay(600);
-  const newId = Math.max(...materialsData.map(m => m.Id), 0) + 1;
-  const newMaterial = {
-    ...materialData,
-    Id: newId,
-    lastUpdated: new Date().toISOString().split('T')[0]
-  };
-  materialsData.push(newMaterial);
-  return {
-    ...newMaterial,
-    stockLevel: getStockLevel(newMaterial.currentStock, newMaterial.reorderLevel)
-  };
+  try {
+    const params = {
+      records: [{
+        name_c: materialData.name || materialData.name_c,
+        category_c: materialData.category || materialData.category_c,
+        current_stock_c: materialData.currentStock || materialData.current_stock_c || 0,
+        unit_c: materialData.unit || materialData.unit_c,
+        reorder_level_c: materialData.reorderLevel || materialData.reorder_level_c || 0,
+        supplier_c: materialData.supplier || materialData.supplier_c,
+        last_updated_c: new Date().toISOString().split('T')[0]
+      }]
+    };
+    
+    const response = await apperClient.createRecord(MATERIAL_TABLE, params);
+    
+    if (!response.success) {
+      console.error('Failed to create material:', response.message);
+      throw new Error(response.message || 'Failed to create material');
+    }
+    
+    const newMaterial = response.results[0].data;
+    return {
+      ...newMaterial,
+      currentStock: newMaterial.current_stock_c || 0,
+      reorderLevel: newMaterial.reorder_level_c || 0,
+      name: newMaterial.name_c || '',
+      stockLevel: getStockLevel(newMaterial.current_stock_c || 0, newMaterial.reorder_level_c || 0)
+    };
+  } catch (error) {
+    console.error('Failed to add material:', error);
+    throw error;
+  }
 };
 
 const updateMaterial = async (id, data) => {
   await delay(600);
-  const index = materialsData.findIndex(m => m.Id === parseInt(id));
-  if (index === -1) throw new Error('Material not found');
-  
-  materialsData[index] = { ...materialsData[index], ...data, Id: parseInt(id) };
-  return {
-    ...materialsData[index],
-    stockLevel: getStockLevel(materialsData[index].currentStock, materialsData[index].reorderLevel)
-  };
+  try {
+    const updateData = {
+      Id: parseInt(id)
+    };
+    
+    if (data.name !== undefined || data.name_c !== undefined) {
+      updateData.name_c = data.name || data.name_c;
+    }
+    if (data.category !== undefined || data.category_c !== undefined) {
+      updateData.category_c = data.category || data.category_c;
+    }
+    if (data.currentStock !== undefined || data.current_stock_c !== undefined) {
+      updateData.current_stock_c = data.currentStock || data.current_stock_c;
+    }
+    if (data.unit !== undefined || data.unit_c !== undefined) {
+      updateData.unit_c = data.unit || data.unit_c;
+    }
+    if (data.reorderLevel !== undefined || data.reorder_level_c !== undefined) {
+      updateData.reorder_level_c = data.reorderLevel || data.reorder_level_c;
+    }
+    if (data.supplier !== undefined || data.supplier_c !== undefined) {
+      updateData.supplier_c = data.supplier || data.supplier_c;
+    }
+    updateData.last_updated_c = new Date().toISOString().split('T')[0];
+    
+    const params = {
+      records: [updateData]
+    };
+    
+    const response = await apperClient.updateRecord(MATERIAL_TABLE, params);
+    
+    if (!response.success) {
+      console.error('Failed to update material:', response.message);
+      throw new Error(response.message || 'Material not found');
+    }
+    
+    const updatedMaterial = response.results[0].data;
+    return {
+      ...updatedMaterial,
+      currentStock: updatedMaterial.current_stock_c || 0,
+      reorderLevel: updatedMaterial.reorder_level_c || 0,
+      name: updatedMaterial.name_c || '',
+      stockLevel: getStockLevel(updatedMaterial.current_stock_c || 0, updatedMaterial.reorder_level_c || 0)
+    };
+  } catch (error) {
+    console.error('Failed to update material:', error);
+    throw error;
+  }
 };
 // Bulk operations
 async function bulkUpdateQuantities(updates) {
   await delay(800);
   
   try {
-    const materials = await getMaterials();
-    let updatedCount = 0;
+    const updateRecords = updates.map(update => ({
+      Id: parseInt(update.id),
+      current_stock_c: update.quantity,
+      last_updated_c: new Date().toISOString().split('T')[0]
+    }));
     
-    const updatedMaterials = materials.map(material => {
-      const update = updates.find(u => u.id === material.Id);
-      if (update && update.quantity !== undefined) {
-        updatedCount++;
-        return {
-          ...material,
-          currentStock: update.quantity,
-          stockLevel: getStockLevel(update.quantity, material.reorderLevel),
-          lastUpdated: new Date().toLocaleDateString()
-        };
+    const params = {
+      records: updateRecords
+    };
+    
+    const response = await apperClient.updateRecord(MATERIAL_TABLE, params);
+    
+    if (!response.success) {
+      console.error('Failed to bulk update quantities:', response.message);
+      throw new Error(response.message || 'Failed to update quantities in bulk');
+    }
+    
+    if (response.results) {
+      const successful = response.results.filter(r => r.success);
+      const failed = response.results.filter(r => !r.success);
+      
+      if (failed.length > 0) {
+        console.error(`Failed to update ${failed.length} material quantities:`, failed);
       }
-      return material;
-    });
+      
+      return { success: true, updatedCount: successful.length };
+    }
     
-    // Simulate saving to storage
-    localStorage.setItem('materials', JSON.stringify(updatedMaterials));
-    
-    return { success: true, updatedCount };
+    return { success: true, updatedCount: updates.length };
   } catch (error) {
+    console.error('Failed to bulk update quantities:', error);
     throw new Error('Failed to update quantities in bulk');
   }
 }
@@ -126,28 +258,37 @@ async function bulkUpdateReorderPoints(updates) {
   await delay(800);
   
   try {
-    const materials = await getMaterials();
-    let updatedCount = 0;
+    const updateRecords = updates.map(update => ({
+      Id: parseInt(update.id),
+      reorder_level_c: update.reorderLevel,
+      last_updated_c: new Date().toISOString().split('T')[0]
+    }));
     
-    const updatedMaterials = materials.map(material => {
-      const update = updates.find(u => u.id === material.Id);
-      if (update && update.reorderLevel !== undefined) {
-        updatedCount++;
-        return {
-          ...material,
-          reorderLevel: update.reorderLevel,
-          stockLevel: getStockLevel(material.currentStock, update.reorderLevel),
-          lastUpdated: new Date().toLocaleDateString()
-        };
+    const params = {
+      records: updateRecords
+    };
+    
+    const response = await apperClient.updateRecord(MATERIAL_TABLE, params);
+    
+    if (!response.success) {
+      console.error('Failed to bulk update reorder points:', response.message);
+      throw new Error(response.message || 'Failed to update reorder points in bulk');
+    }
+    
+    if (response.results) {
+      const successful = response.results.filter(r => r.success);
+      const failed = response.results.filter(r => !r.success);
+      
+      if (failed.length > 0) {
+        console.error(`Failed to update ${failed.length} material reorder points:`, failed);
       }
-      return material;
-    });
+      
+      return { success: true, updatedCount: successful.length };
+    }
     
-    // Simulate saving to storage
-    localStorage.setItem('materials', JSON.stringify(updatedMaterials));
-    
-    return { success: true, updatedCount };
+    return { success: true, updatedCount: updates.length };
   } catch (error) {
+    console.error('Failed to bulk update reorder points:', error);
     throw new Error('Failed to update reorder points in bulk');
   }
 }
@@ -156,31 +297,34 @@ async function adjustStock(materialId, adjustment, reason = '') {
   await delay(500);
   
   try {
-    const materials = await getMaterials();
-    const materialIndex = materials.findIndex(m => m.Id === materialId);
+    const material = await getMaterialById(materialId);
     
-    if (materialIndex === -1) {
+    if (!material) {
       throw new Error('Material not found');
     }
     
-    const material = materials[materialIndex];
-    const newStock = Math.max(0, material.currentStock + adjustment);
+    const previousStock = material.current_stock_c || 0;
+    const newStock = Math.max(0, previousStock + adjustment);
     
-    materials[materialIndex] = {
-      ...material,
-      currentStock: newStock,
-      stockLevel: getStockLevel(newStock, material.reorderLevel),
-      lastUpdated: new Date().toLocaleDateString()
+    const params = {
+      records: [{
+        Id: parseInt(materialId),
+        current_stock_c: newStock,
+        last_updated_c: new Date().toISOString().split('T')[0]
+      }]
     };
     
-    // Simulate saving to storage
-    localStorage.setItem('materials', JSON.stringify(materials));
+    const response = await apperClient.updateRecord(MATERIAL_TABLE, params);
     
-    // Log adjustment (in real app, this would go to audit log)
+    if (!response.success) {
+      console.error('Failed to adjust stock:', response.message);
+      throw new Error(response.message || 'Failed to adjust stock');
+    }
+    
     const adjustmentLog = {
       materialId,
-      materialName: material.name,
-      previousStock: material.currentStock,
+      materialName: material.name_c || material.name,
+      previousStock,
       adjustment,
       newStock,
       reason,
@@ -190,6 +334,7 @@ async function adjustStock(materialId, adjustment, reason = '') {
     
     return { success: true, newStock, adjustmentLog };
   } catch (error) {
+    console.error('Failed to adjust stock:', error);
     throw new Error(`Failed to adjust stock: ${error.message}`);
   }
 }
@@ -263,7 +408,7 @@ async function getFinishedGoods() {
         {"field": {"Name": "image_url_c"}},
         {"field": {"Name": "batches_c"}}
       ],
-orderBy: [{"fieldName": "Name", "sorttype": "ASC"}]
+      orderBy: [{"fieldName": "Name", "sorttype": "ASC"}]
     };
     
     const response = await apperClient.fetchRecords(FINISHED_GOODS_TABLE, params);
@@ -414,7 +559,7 @@ async function fulfillOrder(orderId, productName, quantity) {
   
   try {
     // Find product by name
-const findParams = {
+    const findParams = {
       fields: [
         {"field": {"Name": "Id"}},
         {"field": {"Name": "name_c"}},
@@ -482,11 +627,11 @@ async function getOrderFulfillmentStatus(orderId) {
     };
   }
   
-  // Return mock status for now - this would typically check order records
+  // Return status based on reservation
   return {
     orderId: parseInt(orderId),
     status: reservation.status || 'Reserved',
-productName: reservation.productName,
+    productName: reservation.productName,
     reservedQuantity: reservation.quantity,
     reservedAt: reservation.reservedAt,
     fulfilledAt: new Date().toISOString(),
@@ -549,14 +694,14 @@ async function createWorkOrderForProduct(productId, quantity, priority = 'normal
 
     // Create work order object
     const workOrder = {
-      Id: Date.now(), // Simple ID generation for mock
+      Id: Date.now(),
       productName: product.name_c || product.Name,
       productId: productId,
       quantity: quantity,
       priority: priority,
       status: 'planned',
       createdAt: new Date().toISOString(),
-      estimatedCompletion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+      estimatedCompletion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     };
 
     console.log('Work order created:', workOrder);
@@ -576,7 +721,7 @@ const getLowStockAlerts = async () => {
   ).map(material => ({
     ...material,
     alertType: material.stockLevel === 'critical' ? 'critical' : 'warning',
-message: `${material.name} is ${material.stockLevel === 'critical' ? 'critically' : ''} low on stock`
+    message: `${material.name} is ${material.stockLevel === 'critical' ? 'critically' : ''} low on stock`
   }));
 };
 
@@ -585,12 +730,12 @@ const getMaterialRequirementsForWorkOrders = async () => {
   await delay(200);
   
   // This would integrate with workOrderService to get pending work orders
-  // For now, return mock data showing material demand
+  // For now, return mock data showing material demand (business logic calculation)
   return [
     { materialId: 1, materialName: "Steel Sheets", totalRequired: 150, pendingWorkOrders: 3 },
     { materialId: 2, materialName: "Aluminum Rods", totalRequired: 75, pendingWorkOrders: 2 },
     { materialId: 3, materialName: "Copper Wire", totalRequired: 500, pendingWorkOrders: 4 }
-];
+  ];
 };
 
 // Get materials with work order demand information
