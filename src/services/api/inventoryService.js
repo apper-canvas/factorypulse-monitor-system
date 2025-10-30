@@ -1,22 +1,10 @@
-import { getApperClient } from '@/services/apperClient';
+import { getApperClient } from "@/services/apperClient";
 
 const apperClient = getApperClient();
 const MATERIAL_TABLE = 'material_c';
 const FINISHED_GOODS_TABLE = 'finished_good_c';
 
-// ApperClient for database operations
-const { ApperClient } = window.ApperSDK;
-const apperClient = new ApperClient({
-  apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
-  apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
-});
-
 // Helper function to simulate API delay
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-// Database table name for finished goods
-const FINISHED_GOODS_TABLE = 'finished_good_c';
-
-// Simulate API delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 // Get stock level status
 const getStockLevel = (current, reorder) => {
