@@ -1,9 +1,32 @@
-import productionLinesData from "@/services/mockData/productionLines.json";
+// Production line data will be fetched from Apper Backend using ApperClient
 
 // Simulate API delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-let productionLines = [...productionLinesData];
+// Production lines data array
+let productionLines = [
+  {
+    Id: 1,
+    name: "Line A",
+    status: "active",
+    efficiency: 92,
+    lastUpdate: new Date().toISOString()
+  },
+  {
+    Id: 2,
+    name: "Line B",
+    status: "active",
+    efficiency: 88,
+    lastUpdate: new Date().toISOString()
+  },
+  {
+    Id: 3,
+    name: "Line C",
+    status: "maintenance",
+    efficiency: 0,
+    lastUpdate: new Date().toISOString()
+  }
+];
 
 export const getAll = async () => {
   await delay(300);
