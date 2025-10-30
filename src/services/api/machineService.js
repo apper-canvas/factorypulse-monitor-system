@@ -1,4 +1,4 @@
-import { getApperClient } from "@/services/apperClient";
+import { getApperClient } from "@/services/apperClient.js";
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
