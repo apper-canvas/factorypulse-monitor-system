@@ -1,10 +1,12 @@
-import machinesData from "@/services/mockData/machines.json";
+import { getApperClient } from "@/services/apperClient";
 
-// Simulate API delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-let machines = [...machinesData];
+// Machine service using ApperClient for database operations
+const tableName = 'machine_c';
 
+// In-memory storage for machines
+let machines = [];
 export const getAll = async () => {
   await delay(250);
   return [...machines];
