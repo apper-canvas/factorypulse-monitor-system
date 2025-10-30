@@ -1,4 +1,24 @@
-import { getApperClient } from "@/services/apperClient.js";
+// ApperClient initialization function
+function getApperClient() {
+  if (!window.ApperSDK) {
+    console.warn('ApperSDK not available on window object');
+    return null;
+  }
+
+  const { ApperClient } = window.ApperSDK;
+  const projectId = import.meta.env.VITE_APPER_PROJECT_ID;
+  const publicKey = import.meta.env.VITE_APPER_PUBLIC_KEY;
+
+  if (!projectId) {
+    console.error('VITE_APPER_PROJECT_ID is required');
+    return null;
+  }
+
+  return new ApperClient({
+    apperProjectId: projectId,
+    apperPublicKey: publicKey,
+  });
+}
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
